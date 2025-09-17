@@ -6,6 +6,7 @@ on:
       - '**'
     branches:
       - 'main'
+      - 'fix-publish'
   workflow_dispatch:
 
 jobs:
