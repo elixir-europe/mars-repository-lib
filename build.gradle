@@ -7,7 +7,7 @@ plugins {
 sourceCompatibility = 11
 targetCompatibility = 11
 
-group = 'com.elixir.biohackaton'
+group = 'com.elixir.mars'
 version = '0.0.1'
 
 repositories {

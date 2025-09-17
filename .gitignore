@@ -6,3 +6,5 @@ build
 
 # Ignore compiled bin directory
 bin
+
+.idea/
