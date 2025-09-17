@@ -31,6 +31,14 @@ publishing {
     }
      repositories {
         mavenLocal()
+         maven {
+             name = "GitHubPackages"
+             url = uri("https://maven.pkg.github.com/elixir-europe/mars-repository-lib")
+             credentials {
+                 username = System.getenv("USERNAME")
+                 password = System.getenv("TOKEN")
+             }
+         }
     }
 }
 
