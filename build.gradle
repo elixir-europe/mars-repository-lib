@@ -1,14 +1,14 @@
 plugins {
-    id "com.diffplug.spotless" version "5.12.5"
+    id "com.diffplug.spotless" version "6.25.0"
     id 'java-library'
     id 'maven-publish'
 }
 
-sourceCompatibility = 11
-targetCompatibility = 11
+sourceCompatibility = 17
+targetCompatibility = 17
 
 group = 'com.elixir.mars'
-version = '0.0.1'
+version = '0.0.2-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -31,14 +31,14 @@ publishing {
     }
      repositories {
         mavenLocal()
-         maven {
-             name = "GitHubPackages"
-             url = uri("https://maven.pkg.github.com/elixir-europe/mars-repository-lib")
-             credentials {
-                 username = System.getenv("GITHUB_ACTOR")
-                 password = System.getenv("GITHUB_TOKEN")
-             }
-         }
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/elixir-europe/mars-repository-lib")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
 
