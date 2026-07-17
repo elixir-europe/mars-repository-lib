@@ -1,4 +1,4 @@
-name: Publish Python package to PyPI
+name: Publish Python package to GitHub Releases
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     defaults:
       run:
         working-directory: python
@@ -26,7 +26,7 @@ jobs:
       - name: Build package
         run: python -m build
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Create GitHub Release and upload artifacts
+        uses: softprops/action-gh-release@v2
         with:
-          packages-dir: python/dist/
+          files: python/dist/*
