@@ -136,7 +136,7 @@ public abstract class MarsReceiptProvider {
         .forEach(
             study -> {
               if (studiesAccessionsMap != null) {
-                if (Assay.Fields.id.equals(studiesAccessionsMap.isaItemName)) {
+                if (studiesAccessionsMap.isaItemName.equals(Assay.Fields.id)) {
                   Optional.ofNullable(study.assays)
                       .orElse(new ArrayList<>())
                       .forEach(
