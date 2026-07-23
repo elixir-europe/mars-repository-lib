@@ -165,10 +165,10 @@ public abstract class MarsReceiptProvider {
                       .orElse(new ArrayList<>())
                       .forEach(
                           sample -> {
-                            ReceiptAccessionMap samplAccessionMap = getAccessionMapEntry(
+                            ReceiptAccessionMap sampleAccessionMap = getAccessionMapEntry(
                                 samplesAccessionsMap, sample, marsMessage);
-                            if (samplAccessionMap.accession != null) {
-                              marsAccessions.add(getSampleMarsAccession(studyAccessionMap, samplAccessionMap));
+                            if (sampleAccessionMap.accession != null) {
+                              marsAccessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
                             }
                           });
                 }
