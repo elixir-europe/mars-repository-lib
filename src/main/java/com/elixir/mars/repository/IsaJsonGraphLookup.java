@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * Shared ISA-JSON graph helpers for repository service conversions.
  *
- * <p>Experiment XML, run XML, and receipt conversion all need to resolve the same process/data-file
+ * <p>Repository metadata and receipt conversion all need to resolve the same process/data-file
  * lineage. Keeping the lookup rules here avoids subtle drift, especially around ISA's
  * #data_file/... versus #data/... ID forms.
  */
@@ -24,7 +24,12 @@ public final class IsaJsonGraphLookup {
 
   private IsaJsonGraphLookup() {}
 
-  /** Finds the process that produced an output material or data file. */
+  /**
+   * Finds the process that produced the given output material or data file.
+   *
+   * <p>ISA process outputs and assay data files can use different ID prefixes for the same
+   * object, so data file IDs are normalized before comparison.
+   */
   public static ProcessSequence findProcessByOutputId(
       final List<ProcessSequence> processSequence, final String outputId) {
     if (processSequence == null || outputId == null) {
@@ -52,6 +57,12 @@ public final class IsaJsonGraphLookup {
     return null;
   }
 
+  /**
+   * Finds the first assay other material referenced by a process input.
+   *
+   * <p>In ISA, a process input stores only an item ID. This helper resolves that ID against the
+   * assay materials collection and returns the matching other material, if one exists.
+   */
   public static OtherMaterial findOtherMaterialFromProcessInput(
       final ProcessSequence process, final Materials materials) {
     if (process == null || process.getInputs() == null) {
@@ -73,6 +84,12 @@ public final class IsaJsonGraphLookup {
     return null;
   }
 
+  /**
+   * Finds assay data files referenced by a process's outputs.
+   *
+   * <p>Process outputs can point to data files using the process-level ID form. This helper
+   * normalizes those IDs before matching them against the assay data file list.
+   */
   public static List<DataFile> findDataFilesFromProcessOutputs(
       final ProcessSequence process, final List<DataFile> assayDataFiles) {
     final List<DataFile> dataFiles = new ArrayList<>();
@@ -100,6 +117,7 @@ public final class IsaJsonGraphLookup {
     return dataFiles;
   }
 
+  /** Builds a lookup map of assay other materials keyed by their ISA IDs. */
   public static Map<String, OtherMaterial> buildOtherMaterialsById(final Materials materials) {
     final Map<String, OtherMaterial> otherMaterialsById = new HashMap<>();
     if (materials == null || materials.getOtherMaterials() == null) {
