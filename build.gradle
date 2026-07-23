@@ -8,7 +8,7 @@ sourceCompatibility = 17
 targetCompatibility = 17
 
 group = 'com.elixir.mars'
-version = '0.0.2'
+version = '0.0.3-SNAPSHOT'
 
 repositories {
     mavenCentral()
