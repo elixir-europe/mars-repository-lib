@@ -104,7 +104,7 @@ public abstract class MarsReceiptProvider {
   }
 
   protected void setMarsReceiptErrors(MarsErrorType type, final String... errors) {
-    for (String error : Optional.ofNullable(errors).orElse(new String[] { "Null message recieved" })) {
+    for (String error : Optional.ofNullable(errors).orElse(new String[] { "Null message received" })) {
       marsMessage.errors
           .add(
               MarsError.builder()
