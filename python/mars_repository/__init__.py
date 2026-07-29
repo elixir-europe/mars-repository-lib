@@ -7,9 +7,17 @@ from .receipt_builder import (
     make_source_path,
     make_other_material_path,
     make_data_file_path,
+    make_assay_path,
 )
 from .receipt_accessions_map import ReceiptAccessionsMap
 from .mars_receipt_exception import MarsReceiptException
+from .isa_json_graph_lookup import (
+    normalize_data_file_id,
+    build_other_materials_by_id,
+    find_process_by_output_id,
+    find_other_material_from_process_input,
+    find_data_files_from_process_outputs,
+)
 from .models.receipt import (
     MarsReceipt,
     MarsError,
@@ -66,8 +74,14 @@ __all__ = [
     "make_source_path",
     "make_other_material_path",
     "make_data_file_path",
+    "make_assay_path",
     "ReceiptAccessionsMap",
     "MarsReceiptException",
+    "normalize_data_file_id",
+    "build_other_materials_by_id",
+    "find_process_by_output_id",
+    "find_other_material_from_process_input",
+    "find_data_files_from_process_outputs",
     "MarsReceipt",
     "MarsError",
     "MarsErrorType",

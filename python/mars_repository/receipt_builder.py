@@ -74,15 +74,33 @@ def _collect_accessions(
         if studies_acc is None:
             continue
 
-        study_key, study_value, study_acc, errs = _resolve(studies_acc, study)
-        errors.extend(errs)
-        if study_acc is not None:
-            accessions.append(
-                MarsAccession(
-                    value=study_acc,
-                    path=make_study_path(study_key, study_value),
+        if studies_acc.isa_item_name == "id":
+            for assay in (study.assays or []):
+                _, assay_value, assay_acc, errs = _resolve(studies_acc, assay)
+                errors.extend(errs)
+                if assay_acc is not None:
+                    accessions.append(
+                        MarsAccession(
+                            value=assay_acc,
+                            path=make_assay_path(
+                                "title", study.title or "",
+                                "@id", assay_value,
+                            ),
+                        )
+                    )
+        else:
+            study_key, study_value, study_acc, errs = _resolve(studies_acc, study)
+            errors.extend(errs)
+            if study_acc is not None:
+                accessions.append(
+                    MarsAccession(
+                        value=study_acc,
+                        path=make_study_path(study_key, study_value),
+                    )
                 )
-            )
+
+        study_key = "title"
+        study_value = study.title or ""
 
         if samples_acc is not None and study.materials is not None:
             for sample in (study.materials.samples or []):
@@ -191,6 +209,17 @@ def make_sample_path(
         MarsPath(key="studies", where=MarsWhere(key=study_key, value=study_value)),
         MarsPath(key="materials"),
         MarsPath(key="samples", where=MarsWhere(key=sample_key, value=sample_value)),
+    ]
+
+
+def make_assay_path(
+    study_key: str, study_value: str,
+    assay_key: str, assay_value: str,
+) -> list[MarsPath]:
+    return [
+        MarsPath(key="investigation"),
+        MarsPath(key="studies", where=MarsWhere(key=study_key, value=study_value)),
+        MarsPath(key="assays", where=MarsWhere(key=assay_key, value=assay_value)),
     ]
 
 
