@@ -1,9 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 from .component_type import ComponentType
 
-
-@dataclass
-class Component:
-    component_name: Optional[str] = None
-    component_type: Optional[ComponentType] = None
+class Component(TypedDict, total=False):
+    component_name: str
+    component_type: ComponentType

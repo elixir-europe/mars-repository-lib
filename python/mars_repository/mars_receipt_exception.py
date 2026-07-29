@@ -11,9 +11,6 @@ class MarsReceiptException(RuntimeError):
         error_path: Optional[List[MarsPath]] = None,
         exception: Optional[Exception] = None,
     ):
-        if exception is not None:
-            self.__cause__ = exception
-
         if isinstance(exception, MarsReceiptException):
             self.error = exception.error
         elif error_path is not None:

@@ -1,8 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 
 
-@dataclass
-class MarsInfo:
-    name: Optional[str] = None
-    message: str = ""
+class MarsInfo(TypedDict, total=False):
+    name: str
+    message: str

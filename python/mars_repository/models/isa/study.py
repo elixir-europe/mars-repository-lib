@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .comment import Comment
 from .person import Person
 from .characteristic_category import CharacteristicCategory
@@ -8,23 +8,21 @@ from .protocol import Protocol
 from .process_sequence import ProcessSequence
 from .assay import Assay
 
-
-@dataclass
-class Study:
-    comments: Optional[List[Comment]] = None
-    publications: Optional[List[Any]] = None
-    people: Optional[List[Person]] = None
-    study_design_descriptors: Optional[List[Any]] = None
-    characteristic_categories: Optional[List[CharacteristicCategory]] = None
-    materials: Optional[Materials] = None
-    protocols: Optional[List[Protocol]] = None
-    process_sequence: Optional[List[ProcessSequence]] = None
-    assays: Optional[List[Assay]] = None
-    factors: Optional[List[Any]] = None
-    unit_categories: Optional[List[Any]] = None
-    identifier: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    submission_date: Optional[str] = None
-    public_release_date: Optional[str] = None
-    filename: Optional[str] = None
+class Study(TypedDict, total=False):
+    comments: List[Comment]
+    publications: List[Any]
+    people: List[Person]
+    study_design_descriptors: List[Any]
+    characteristic_categories: List[CharacteristicCategory]
+    materials: Materials
+    protocols: List[Protocol]
+    process_sequence: List[ProcessSequence]
+    assays: List[Assay]
+    factors: List[Any]
+    unit_categories: List[Any]
+    identifier: str
+    title: str
+    description: str
+    submission_date: str
+    public_release_date: str
+    filename: str

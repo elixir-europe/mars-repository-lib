@@ -1,9 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 
-
-@dataclass
-class Unit:
-    term_source: Optional[str] = None
-    term_accession: Optional[str] = None
-    comments: Optional[List[Any]] = None
+class Unit(TypedDict, total=False):
+    term_source: str
+    term_accession: str
+    comments: List[Any]

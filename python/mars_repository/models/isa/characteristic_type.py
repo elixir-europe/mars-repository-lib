@@ -1,9 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 
-
-@dataclass
-class CharacteristicType:
-    annotation_value: Optional[str] = None
-    term_accession: Optional[str] = None
-    term_source: Optional[str] = None
+class CharacteristicType(TypedDict, total=False):
+    annotation_value: str
+    term_accession: str
+    term_source: str

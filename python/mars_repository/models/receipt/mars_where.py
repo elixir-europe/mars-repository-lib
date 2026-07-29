@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from __future__ import annotations
+from typing import TypedDict
 
 
-@dataclass
-class MarsWhere:
+class MarsWhere(TypedDict, total=False):
     key: str
     value: str

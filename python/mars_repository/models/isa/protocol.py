@@ -1,17 +1,15 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .protocol_type import ProtocolType
 from .parameter import Parameter
 from .component import Component
 
-
-@dataclass
-class Protocol:
-    parameters: Optional[List[Parameter]] = None
-    components: Optional[List[Component]] = None
-    id: Optional[str] = None
-    name: Optional[str] = None
-    protocol_type: Optional[ProtocolType] = None
-    description: Optional[str] = None
-    uri: Optional[str] = None
-    version: Optional[str] = None
+class Protocol(TypedDict, total=False):
+    parameters: List[Parameter]
+    components: List[Component]
+    id: str
+    name: str
+    protocol_type: ProtocolType
+    description: str
+    uri: str
+    version: str

@@ -1,10 +1,8 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .characteristic import Characteristic
 
-
-@dataclass
-class Source:
-    characteristics: Optional[List[Characteristic]] = None
-    id: Optional[str] = None
-    name: Optional[str] = None
+class Source(TypedDict, total=False):
+    characteristics: List[Characteristic]
+    id: str
+    name: str

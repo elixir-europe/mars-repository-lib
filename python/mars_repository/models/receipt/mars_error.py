@@ -1,11 +1,10 @@
-from dataclasses import dataclass, field
-from typing import List, Optional
+from __future__ import annotations
+from typing import List, TypedDict
 from .mars_error_type import MarsErrorType
 from .mars_path import MarsPath
 
 
-@dataclass
-class MarsError:
+class MarsError(TypedDict, total=False):
     type: MarsErrorType
     message: str
-    path: Optional[List[MarsPath]] = None
+    path: List[MarsPath]

@@ -1,9 +1,8 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 from .mars_where import MarsWhere
 
 
-@dataclass
-class MarsPath:
+class MarsPath(TypedDict, total=False):
     key: str
-    where: Optional[MarsWhere] = None
+    where: MarsWhere

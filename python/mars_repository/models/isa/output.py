@@ -1,7 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 
-
-@dataclass
-class Output:
-    id: Optional[str] = None
+class Output(TypedDict, total=False):
+    id: str

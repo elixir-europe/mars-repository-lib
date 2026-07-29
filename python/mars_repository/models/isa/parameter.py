@@ -1,9 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 from .parameter_name import ParameterName
 
-
-@dataclass
-class Parameter:
-    parameter_name: Optional[ParameterName] = None
-    id: Optional[str] = None
+class Parameter(TypedDict, total=False):
+    parameter_name: ParameterName
+    id: str

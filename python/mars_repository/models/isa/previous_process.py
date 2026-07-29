@@ -1,7 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 
-
-@dataclass
-class PreviousProcess:
-    id: Optional[str] = None
+class PreviousProcess(TypedDict, total=False):
+    id: str

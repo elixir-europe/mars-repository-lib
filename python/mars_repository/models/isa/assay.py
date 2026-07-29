@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .measurement_type import MeasurementType
 from .technology_type import TechnologyType
 from .characteristic_category import CharacteristicCategory
@@ -8,17 +8,15 @@ from .process_sequence import ProcessSequence
 from .data_file import DataFile
 from .comment import Comment
 
-
-@dataclass
-class Assay:
-    measurement_type: Optional[MeasurementType] = None
-    technology_type: Optional[TechnologyType] = None
-    characteristic_categories: Optional[List[CharacteristicCategory]] = None
-    materials: Optional[Materials] = None
-    process_sequence: Optional[List[ProcessSequence]] = None
-    data_files: Optional[List[DataFile]] = None
-    comments: Optional[List[Comment]] = None
-    unit_categories: Optional[List[Any]] = None
-    id: Optional[str] = None
-    filename: Optional[str] = None
-    technology_platform: Optional[str] = None
+class Assay(TypedDict, total=False):
+    measurement_type: MeasurementType
+    technology_type: TechnologyType
+    characteristic_categories: List[CharacteristicCategory]
+    materials: Materials
+    process_sequence: List[ProcessSequence]
+    data_files: List[DataFile]
+    comments: List[Comment]
+    unit_categories: List[Any]
+    id: str
+    filename: str
+    technology_platform: str

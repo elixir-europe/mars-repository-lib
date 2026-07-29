@@ -1,12 +1,10 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .source import Source
 from .sample import Sample
 from .other_material import OtherMaterial
 
-
-@dataclass
-class Materials:
-    sources: Optional[List[Source]] = None
-    samples: Optional[List[Sample]] = None
-    other_materials: Optional[List[OtherMaterial]] = None
+class Materials(TypedDict, total=False):
+    sources: List[Source]
+    samples: List[Sample]
+    other_materials: List[OtherMaterial]

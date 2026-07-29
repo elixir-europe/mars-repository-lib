@@ -1,8 +1,6 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 from .investigation import Investigation
 
-
-@dataclass
-class IsaJson:
-    investigation: Optional[Investigation] = None
+class IsaJson(TypedDict, total=False):
+    investigation: Investigation

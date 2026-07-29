@@ -1,9 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 
-
-@dataclass
-class Role:
-    term_accession: Optional[str] = None
-    term_source: Optional[str] = None
-    annotation_value: Optional[str] = None
+class Role(TypedDict, total=False):
+    term_accession: str
+    term_source: str
+    annotation_value: str

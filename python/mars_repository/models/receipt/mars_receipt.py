@@ -1,13 +1,12 @@
-from dataclasses import dataclass, field
-from typing import List, Optional
+from __future__ import annotations
+from typing import List, TypedDict
 from .mars_error import MarsError
 from .mars_info import MarsInfo
 from .mars_accession import MarsAccession
 
 
-@dataclass
-class MarsReceipt:
-    target_repository: str = ""
-    errors: Optional[List[MarsError]] = None
-    info: Optional[List[MarsInfo]] = None
-    accessions: Optional[List[MarsAccession]] = None
+class MarsReceipt(TypedDict, total=False):
+    target_repository: str
+    errors: List[MarsError]
+    info: List[MarsInfo]
+    accessions: List[MarsAccession]

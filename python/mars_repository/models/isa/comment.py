@@ -1,9 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 
-
-@dataclass
-class Comment:
-    name: str = ""
-    value: str = ""
-    id: Optional[str] = None
+class Comment(TypedDict, total=False):
+    name: str
+    value: str
+    id: str

@@ -1,12 +1,10 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from __future__ import annotations
+from typing import TypedDict
 from .category import Category
 from .value import Value
 from .unit import Unit
 
-
-@dataclass
-class FactorValue:
-    category: Optional[Category] = None
-    value: Optional[Value] = None
-    unit: Optional[Unit] = None
+class FactorValue(TypedDict, total=False):
+    category: Category
+    value: Value
+    unit: Unit

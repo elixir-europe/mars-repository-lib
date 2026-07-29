@@ -1,11 +1,9 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .comment import Comment
 
-
-@dataclass
-class DataFile:
-    comments: Optional[List[Comment]] = None
-    id: Optional[str] = None
-    name: Optional[str] = None
-    type: Optional[str] = None
+class DataFile(TypedDict, total=False):
+    comments: List[Comment]
+    id: str
+    name: str
+    type: str

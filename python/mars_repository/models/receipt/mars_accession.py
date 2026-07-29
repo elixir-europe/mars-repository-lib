@@ -1,9 +1,8 @@
-from dataclasses import dataclass, field
-from typing import List
+from __future__ import annotations
+from typing import List, TypedDict
 from .mars_path import MarsPath
 
 
-@dataclass
-class MarsAccession:
+class MarsAccession(TypedDict, total=False):
     value: str
-    path: List[MarsPath] = field(default_factory=list)
+    path: List[MarsPath]

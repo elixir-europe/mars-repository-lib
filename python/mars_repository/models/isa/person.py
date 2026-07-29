@@ -1,19 +1,17 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from __future__ import annotations
+from typing import Any, List, TypedDict
 from .role import Role
 from .comment import Comment
 
-
-@dataclass
-class Person:
-    roles: Optional[List[Role]] = None
-    comments: Optional[List[Comment]] = None
-    id: Optional[str] = None
-    last_name: Optional[str] = None
-    first_name: Optional[str] = None
-    mid_initials: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    fax: Optional[str] = None
-    address: Optional[str] = None
-    affiliation: Optional[str] = None
+class Person(TypedDict, total=False):
+    roles: List[Role]
+    comments: List[Comment]
+    id: str
+    last_name: str
+    first_name: str
+    mid_initials: str
+    email: str
+    phone: str
+    fax: str
+    address: str
+    affiliation: str
