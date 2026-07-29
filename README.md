@@ -111,6 +111,13 @@ pip install -e .
 
 ```python
 from mars_repository import build_mars_receipt, MarsReceipt
+
+mars_receipt = build_mars_receipt(
+    "ena",
+    isa_json=isa_json,
+    studies_accessions=receipt.studies,
+    samples_accessions=receipt.samples,
+)
 ```
 
 ## License
