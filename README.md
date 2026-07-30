@@ -56,6 +56,30 @@ dependencies {
 }
 ```
 
+## Releasing a New Version
+
+To release a new library version:
+
+1. Update the version in `build.gradle` from the current `-SNAPSHOT` value to
+   the release version, for example `0.0.2`.
+2. Run the build to confirm the code still passes:
+
+   ```bash
+   ./gradlew build
+   ```
+
+3. Commit the version bump.
+4. Create and push a git tag for the release, for example:
+
+   ```bash
+   git tag v0.0.2
+   git push origin v0.0.2
+   ```
+
+5. After the release is published, bump `build.gradle` to the next
+   `-SNAPSHOT` version, such as `0.0.3-SNAPSHOT`, and commit that change.
+6. Create a release based on the tag on Github to produce a changelog.
+
 ## Creating a Receipt Provider
 
 Target repository integrations typically extend `MarsReceiptProvider`, collect
