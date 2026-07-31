@@ -8,3 +8,12 @@ build
 bin
 
 .idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+python/dist/
+python/build/
+python/.venv/
