@@ -54,7 +54,7 @@ dependencies {
 }
 ```
 
-## Releasing a New Version
+### Releasing a New Version
 
 To release a new library version:
 
@@ -78,7 +78,7 @@ To release a new library version:
    `-SNAPSHOT` version, such as `0.0.3-SNAPSHOT`, and commit that change.
 6. Create a release based on the tag on Github to produce a changelog.
 
-## Creating a Receipt Provider
+### Creating a Receipt Provider
 
 Target repository integrations typically extend `MarsReceiptProvider`, collect
 repository accessions, and let the base class build the MARS receipt paths.
