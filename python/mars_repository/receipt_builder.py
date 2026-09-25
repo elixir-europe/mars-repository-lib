@@ -5,6 +5,15 @@ from .models.receipt.mars_error_type import MarsErrorType
 from .models.receipt.mars_receipt import MarsReceipt
 from .receipt_accessions_map import ReceiptAccessionsMap
 
+# Maps ISA model field names to their JSON property names, mirroring the
+# @JsonProperty annotations on the Java ISA model classes. Every ISA model
+# that declares an ``id`` field serializes it as ``@id``.
+_JSON_FIELD_NAMES = {"id": "@id"}
+
+
+def _json_field_key(field_name: str) -> str:
+    return _JSON_FIELD_NAMES.get(field_name, field_name)
+
 
 def build_mars_receipt(
     target_repository: str,
@@ -72,7 +81,7 @@ def _collect_accessions(
 
         if studies_acc.isa_item_name == "id":
             for assay in (study.get("assays") or []):
-                _, assay_value, assay_acc, errs = _resolve(studies_acc, assay)
+                assay_key, assay_value, assay_acc, errs = _resolve(studies_acc, assay)
                 errors.extend(errs)
                 if assay_acc is not None:
                     accessions.append(
@@ -80,7 +89,7 @@ def _collect_accessions(
                             "value": assay_acc,
                             "path": make_assay_path(
                                 "title", study.get("title") or "",
-                                "@id", assay_value,
+                                assay_key, assay_value,
                             ),
                         }
                     )
@@ -101,7 +110,7 @@ def _collect_accessions(
         materials = study.get("materials")
         if samples_acc is not None and materials is not None:
             for sample in (materials.get("samples") or []):
-                _, sample_value, sample_acc, errs = _resolve(samples_acc, sample)
+                sample_key, sample_value, sample_acc, errs = _resolve(samples_acc, sample)
                 errors.extend(errs)
                 if sample_acc is not None:
                     accessions.append(
@@ -109,14 +118,14 @@ def _collect_accessions(
                             "value": sample_acc,
                             "path": make_sample_path(
                                 study_key, study_value,
-                                samples_acc.isa_item_name, sample_value,
+                                sample_key, sample_value,
                             ),
                         }
                     )
 
         if sources_acc is not None and materials is not None:
             for source in (materials.get("sources") or []):
-                _, source_value, source_acc, errs = _resolve(sources_acc, source)
+                source_key, source_value, source_acc, errs = _resolve(sources_acc, source)
                 errors.extend(errs)
                 if source_acc is not None:
                     accessions.append(
@@ -124,7 +133,7 @@ def _collect_accessions(
                             "value": source_acc,
                             "path": make_source_path(
                                 study_key, study_value,
-                                sources_acc.isa_item_name, source_value,
+                                source_key, source_value,
                             ),
                         }
                     )
@@ -134,7 +143,7 @@ def _collect_accessions(
                 assay_materials = assay.get("materials")
                 if other_materials_acc is not None and assay_materials is not None:
                     for om in (assay_materials.get("other_materials") or []):
-                        _, om_value, om_acc, errs = _resolve(other_materials_acc, om)
+                        om_key, om_value, om_acc, errs = _resolve(other_materials_acc, om)
                         errors.extend(errs)
                         if om_acc is not None:
                             accessions.append(
@@ -142,14 +151,14 @@ def _collect_accessions(
                                     "value": om_acc,
                                     "path": make_other_material_path(
                                         study_key, study_value, assay.get("id"),
-                                        other_materials_acc.isa_item_name, om_value,
+                                        om_key, om_value,
                                     ),
                                 }
                             )
 
                 if data_files_acc is not None:
                     for df in (assay.get("data_files") or []):
-                        _, df_value, df_acc, errs = _resolve(data_files_acc, df)
+                        df_key, df_value, df_acc, errs = _resolve(data_files_acc, df)
                         errors.extend(errs)
                         if df_acc is not None:
                             accessions.append(
@@ -157,7 +166,7 @@ def _collect_accessions(
                                     "value": df_acc,
                                     "path": make_data_file_path(
                                         study_key, study_value, assay.get("id"),
-                                        data_files_acc.isa_item_name, df_value,
+                                        df_key, df_value,
                                     ),
                                 }
                             )
@@ -170,13 +179,14 @@ def _resolve(
     item: Any,
 ) -> tuple[str, str, Optional[str], list[dict]]:
     field_value = item.get(acc_map.isa_item_name)
+    field_key = _json_field_key(acc_map.isa_item_name)
     if field_value is not None:
         field_str = str(field_value)
         accession = acc_map.accession_map.get(field_str)
-        return (acc_map.isa_item_name, field_str, accession, [])
+        return (field_key, field_str, accession, [])
     else:
         return (
-            acc_map.isa_item_name,
+            field_key,
             "",
             None,
             [
