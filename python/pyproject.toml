@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mars-repository-py"
+version = "0.0.2"
+description = "Python version of the MARS Repository Library"
+license = { text = "Apache 2.0" }
+requires-python = ">=3.10"
+
+[tool.hatch.build.targets.sdist]
+include = ["/mars_repository"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mars_repository"]
