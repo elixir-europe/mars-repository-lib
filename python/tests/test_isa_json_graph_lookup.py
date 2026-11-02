@@ -19,7 +19,7 @@ def _assay():
 def test_find_process_by_output_id():
     assay = _assay()
     process = find_process_by_output_id(assay["processSequence"], "#data/334")
-    assert process["id"] == "#process/nucleic_acid_sequencing/334"
+    assert process["@id"] == "#process/nucleic_acid_sequencing/334"
 
 
 def test_find_process_by_output_id_no_process_found():
@@ -28,23 +28,19 @@ def test_find_process_by_output_id_no_process_found():
 
 def test_find_other_material_from_process_input():
     assay = _assay()
-    material = find_other_material_from_process_input(
-        assay["processSequence"][2], assay["materials"]
-    )
-    assert material["id"] == "#other_material/333"
+    material = find_other_material_from_process_input(assay["processSequence"][2], assay["materials"])
+    assert material["@id"] == "#other_material/333"
 
 
 def test_find_data_files_from_process_outputs():
     assay = _assay()
-    files = find_data_files_from_process_outputs(
-        assay["processSequence"][2], assay["data_files"]
-    )
-    assert [item["id"] for item in files] == ["#data/334", "#data/335"]
+    files = find_data_files_from_process_outputs(assay["processSequence"][2], assay["dataFiles"])
+    assert [item["@id"] for item in files] == ["#data/334", "#data/335"]
 
 
 def test_build_other_materials_by_id():
     materials = build_other_materials_by_id(_assay()["materials"])
-    assert materials["#other_material/332"]["id"] == "#other_material/332"
+    assert materials["#other_material/332"]["@id"] == "#other_material/332"
 
 
 def test_normalize_data_file_id():
