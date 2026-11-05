@@ -51,7 +51,7 @@ class MarsReceiptProviderTest {
     @Test
     void testSetMarsReceiptAccessions() {
         TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
-        Assay assay = isaJson.getInvestigation().getStudies().get(0).getAssays().get(0);
+        Assay assay = isaJson.getStudies().get(0).getAssays().get(0);
         ReceiptAccessionsMap studiesMap = new ReceiptAccessionsMap() {
             {
                 isaItemName = Assay.Fields.id;

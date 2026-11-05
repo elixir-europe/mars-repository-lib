@@ -29,7 +29,7 @@ class IsaJsonGraphLookupTest {
         new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .readValue(Path.of(ISA_JSON).toFile(), IsaJson.class);
-    assay = isaJson.getInvestigation().getStudies().get(0).getAssays().get(0);
+    assay = isaJson.getStudies().get(0).getAssays().get(0);
   }
 
   @Test
