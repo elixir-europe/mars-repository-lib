@@ -131,7 +131,7 @@ public abstract class MarsReceiptProvider {
       final ReceiptAccessionsMap otherMaterialsAccessionsMap,
       final ReceiptAccessionsMap dataFilesAccessionsMap,
       final IsaJson isaJson) {
-    Optional.ofNullable(isaJson.investigation.studies)
+    Optional.ofNullable(isaJson.studies)
         .orElse(new ArrayList<>())
         .forEach(
             study -> {
@@ -231,7 +231,6 @@ public abstract class MarsReceiptProvider {
 
   public MarsPath[] getStudyMarsPath(final Entry<String, String> isaStudyKeyValue) {
     return new MarsPath[] {
-        MarsPath.builder().key("investigation").build(),
         MarsPath.builder()
             .key("studies")
             .where(
@@ -247,7 +246,6 @@ public abstract class MarsReceiptProvider {
       final Entry<String, String> isaStudyKeyValue,
       final Entry<String, String> isaAssayKeyValue) {
     return new MarsPath[] {
-        MarsPath.builder().key("investigation").build(),
         MarsPath.builder()
             .key("studies")
             .where(
@@ -271,7 +269,6 @@ public abstract class MarsReceiptProvider {
       final Entry<String, String> isaStudyKeyValue,
       final Entry<String, String> isaSampleKeyValue) {
     return new MarsPath[] {
-        MarsPath.builder().key("investigation").build(),
         MarsPath.builder()
             .key("studies")
             .where(MarsWhere.builder()
@@ -294,7 +291,6 @@ public abstract class MarsReceiptProvider {
       final Entry<String, String> isaStudyKeyValue,
       final Entry<String, String> isaSourceKeyValue) {
     return new MarsPath[] {
-        MarsPath.builder().key("investigation").build(),
         MarsPath.builder()
             .key("studies")
             .where(MarsWhere.builder()
@@ -318,7 +314,6 @@ public abstract class MarsReceiptProvider {
       final String assayId,
       final Entry<String, String> isaOtherMaterialKeyValue) {
     return new MarsPath[] {
-        MarsPath.builder().key("investigation").build(),
         MarsPath.builder()
             .key("studies")
             .where(MarsWhere.builder()
@@ -349,7 +344,6 @@ public abstract class MarsReceiptProvider {
       final String assayId,
       final Entry<String, String> isaDataFileKeyValue) {
     return new MarsPath[] {
-        MarsPath.builder().key("investigation").build(),
         MarsPath.builder()
             .key("studies")
             .where(MarsWhere.builder()
