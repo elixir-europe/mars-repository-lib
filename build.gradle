@@ -8,14 +8,14 @@ sourceCompatibility = 17
 targetCompatibility = 17
 
 group = 'com.elixir.mars'
-version = '0.0.3-SNAPSHOT'
+version = '0.0.3'
 
 repositories {
     mavenCentral()
     mavenLocal()
 }
 
-dependencies {   
+dependencies {
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.0'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.0'
 
