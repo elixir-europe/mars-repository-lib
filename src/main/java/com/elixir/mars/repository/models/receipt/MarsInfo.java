@@ -8,8 +8,8 @@ import lombok.Data;
 @Builder
 @Data
 public class MarsInfo {
-  @JsonInclude(Include.NON_NULL)
-  public String name;
+    @JsonInclude(Include.NON_NULL)
+    public String name;
 
-  public String message;
+    public String message;
 }

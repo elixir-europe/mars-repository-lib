@@ -1,14 +1,14 @@
 package com.elixir.mars.repository.models.receipt;
 
-import java.util.List;
-
 import lombok.Builder;
 import lombok.Data;
+
+import java.util.List;
 
 @Builder
 @Data
 public class MarsAccession {
-  public String value;
+    public String value;
 
-  public List<MarsPath> path;
+    public List<MarsPath> path;
 }

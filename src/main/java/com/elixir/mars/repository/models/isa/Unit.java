@@ -1,13 +1,14 @@
 package com.elixir.mars.repository.models.isa;
 
-import java.util.ArrayList;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
+
+import java.util.ArrayList;
 
 @Data
 @FieldNameConstants
 public class Unit {
-  public String termSource;
-  public String termAccession;
-  public ArrayList<Object> comments;
+    public String termSource;
+    public String termAccession;
+    public ArrayList<Object> comments;
 }

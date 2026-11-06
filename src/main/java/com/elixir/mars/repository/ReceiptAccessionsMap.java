@@ -1,12 +1,13 @@
 package com.elixir.mars.repository;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class ReceiptAccessionsMap {
     /**
      * Key and accession number of ISA-JSON item
      */
-    public HashMap<String, String> accessionMap;
+    public Map<String, String> accessionMap;
 
     /**
      * ISA-JSON item name

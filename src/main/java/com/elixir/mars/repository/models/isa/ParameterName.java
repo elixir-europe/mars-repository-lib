@@ -8,7 +8,7 @@ import lombok.experimental.FieldNameConstants;
 @FieldNameConstants
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ParameterName {
-  public String annotationValue;
-  public String termAccession;
-  public String termSource;
+    public String annotationValue;
+    public String termAccession;
+    public String termSource;
 }

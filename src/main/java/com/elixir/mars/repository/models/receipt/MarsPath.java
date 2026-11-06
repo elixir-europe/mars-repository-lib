@@ -8,8 +8,8 @@ import lombok.Data;
 @Builder
 @Data
 public class MarsPath {
-  public String key;
+    public String key;
 
-  @JsonInclude(Include.NON_NULL)
-  public MarsWhere where;
+    @JsonInclude(Include.NON_NULL)
+    public MarsWhere where;
 }

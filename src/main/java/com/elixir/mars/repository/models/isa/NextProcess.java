@@ -9,6 +9,6 @@ import lombok.experimental.FieldNameConstants;
 @FieldNameConstants
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NextProcess {
-  @JsonProperty("@id")
-  public String id;
+    @JsonProperty("@id")
+    public String id;
 }
