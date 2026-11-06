@@ -7,9 +7,9 @@ import lombok.experimental.FieldNameConstants;
 @Data
 @FieldNameConstants
 public class Comment {
-  public String name;
-  public String value;
+    public String name;
+    public String value;
 
-  @JsonProperty("@id")
-  public String id;
+    @JsonProperty("@id")
+    public String id;
 }

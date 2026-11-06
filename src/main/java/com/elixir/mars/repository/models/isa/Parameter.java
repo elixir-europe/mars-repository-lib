@@ -7,8 +7,8 @@ import lombok.experimental.FieldNameConstants;
 @Data
 @FieldNameConstants
 public class Parameter {
-  @JsonProperty("@id")
-  public String id;
+    @JsonProperty("@id")
+    public String id;
 
-  public ParameterName parameterName;
+    public ParameterName parameterName;
 }

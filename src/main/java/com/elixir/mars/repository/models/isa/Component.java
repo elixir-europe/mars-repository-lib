@@ -6,6 +6,6 @@ import lombok.experimental.FieldNameConstants;
 @Data
 @FieldNameConstants
 public class Component {
-  public String componentName;
-  public ComponentType componentType;
+    public String componentName;
+    public ComponentType componentType;
 }

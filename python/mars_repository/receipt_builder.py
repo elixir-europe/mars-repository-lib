@@ -8,11 +8,23 @@ from .receipt_accessions_map import ReceiptAccessionsMap
 # Maps ISA model field names to their JSON property names, mirroring the
 # @JsonProperty annotations on the Java ISA model classes. Every ISA model
 # that declares an ``id`` field serializes it as ``@id``.
-_JSON_FIELD_NAMES = {"id": "@id"}
+_JSON_FIELD_NAMES = {
+    "id": "@id",
+    "data_files": "dataFiles",
+    "other_materials": "otherMaterials",
+}
 
 
 def _json_field_key(field_name: str) -> str:
     return _JSON_FIELD_NAMES.get(field_name, field_name)
+
+
+def _item_value(item: Any, field_name: str) -> Any:
+    """Read a field from either a model-shaped item or raw ISA-JSON."""
+    json_name = _json_field_key(field_name)
+    if json_name in item:
+        return item[json_name]
+    return item.get(field_name)
 
 
 def build_mars_receipt(
@@ -81,7 +93,9 @@ def _collect_accessions(
 
         if studies_acc.isa_item_name == "id":
             for assay in (study.get("assays") or []):
-                assay_key, assay_value, assay_acc, errs = _resolve(studies_acc, assay)
+                assay_key, assay_value, assay_acc, errs = _resolve(
+                    studies_acc, assay, "Assay"
+                )
                 errors.extend(errs)
                 if assay_acc is not None:
                     accessions.append(
@@ -94,7 +108,9 @@ def _collect_accessions(
                         }
                     )
         else:
-            study_key, study_value, study_acc, errs = _resolve(studies_acc, study)
+            study_key, study_value, study_acc, errs = _resolve(
+                studies_acc, study, "dict"
+            )
             errors.extend(errs)
             if study_acc is not None:
                 accessions.append(
@@ -110,7 +126,9 @@ def _collect_accessions(
         materials = study.get("materials")
         if samples_acc is not None and materials is not None:
             for sample in (materials.get("samples") or []):
-                sample_key, sample_value, sample_acc, errs = _resolve(samples_acc, sample)
+                sample_key, sample_value, sample_acc, errs = _resolve(
+                    samples_acc, sample, "Sample"
+                )
                 errors.extend(errs)
                 if sample_acc is not None:
                     accessions.append(
@@ -125,7 +143,9 @@ def _collect_accessions(
 
         if sources_acc is not None and materials is not None:
             for source in (materials.get("sources") or []):
-                source_key, source_value, source_acc, errs = _resolve(sources_acc, source)
+                source_key, source_value, source_acc, errs = _resolve(
+                    sources_acc, source, "Source"
+                )
                 errors.extend(errs)
                 if source_acc is not None:
                     accessions.append(
@@ -142,30 +162,38 @@ def _collect_accessions(
             for assay in (study.get("assays") or []):
                 assay_materials = assay.get("materials")
                 if other_materials_acc is not None and assay_materials is not None:
-                    for om in (assay_materials.get("other_materials") or []):
-                        om_key, om_value, om_acc, errs = _resolve(other_materials_acc, om)
+                    for om in (
+                        assay_materials.get("otherMaterials")
+                        or assay_materials.get("other_materials")
+                        or []
+                    ):
+                        om_key, om_value, om_acc, errs = _resolve(
+                            other_materials_acc, om, "OtherMaterial"
+                        )
                         errors.extend(errs)
                         if om_acc is not None:
                             accessions.append(
                                 {
                                     "value": om_acc,
                                     "path": make_other_material_path(
-                                        study_key, study_value, assay.get("id"),
+                                        study_key, study_value, _item_value(assay, "id"),
                                         om_key, om_value,
                                     ),
                                 }
                             )
 
                 if data_files_acc is not None:
-                    for df in (assay.get("data_files") or []):
-                        df_key, df_value, df_acc, errs = _resolve(data_files_acc, df)
+                    for df in (assay.get("dataFiles") or assay.get("data_files") or []):
+                        df_key, df_value, df_acc, errs = _resolve(
+                            data_files_acc, df, "DataFile"
+                        )
                         errors.extend(errs)
                         if df_acc is not None:
                             accessions.append(
                                 {
                                     "value": df_acc,
                                     "path": make_data_file_path(
-                                        study_key, study_value, assay.get("id"),
+                                        study_key, study_value, _item_value(assay, "id"),
                                         df_key, df_value,
                                     ),
                                 }
@@ -177,8 +205,9 @@ def _collect_accessions(
 def _resolve(
     acc_map: ReceiptAccessionsMap,
     item: Any,
+    item_type: str,
 ) -> tuple[str, str, Optional[str], list[dict]]:
-    field_value = item.get(acc_map.isa_item_name)
+    field_value = _item_value(item, acc_map.isa_item_name)
     field_key = _json_field_key(acc_map.isa_item_name)
     if field_value is not None:
         field_str = str(field_value)
@@ -192,7 +221,7 @@ def _resolve(
             [
                 {
                     "message": (
-                        f"Cannot find an item of {type(item).__name__} "
+                        f"Cannot find an item of {item_type} "
                         f"with the key {acc_map.isa_item_name} in the ISA-JSON input"
                     ),
                     "type": MarsErrorType.INVALID_METADATA,
