@@ -82,12 +82,12 @@ def _collect_accessions(
     data_files_acc: Optional[ReceiptAccessionsMap],
     isa_json: Optional[IsaJson],
 ) -> tuple[list[dict], list[dict]]:
-    if not (isa_json and isa_json.get("investigation") and isa_json["investigation"].get("studies")):
+    if not (isa_json and isa_json.get("studies")):
         return [], []
 
     accessions: list[dict] = []
     errors: list[dict] = []
-    for study in isa_json["investigation"]["studies"]:
+    for study in isa_json["studies"]:
         if studies_acc is None:
             continue
 
@@ -232,7 +232,6 @@ def _resolve(
 
 def make_study_path(key: str, value: str) -> list[dict]:
     return [
-        {"key": "investigation"},
         {"key": "studies", "where": {"key": key, "value": value}},
     ]
 
@@ -242,7 +241,6 @@ def make_sample_path(
     sample_key: str, sample_value: str,
 ) -> list[dict]:
     return [
-        {"key": "investigation"},
         {"key": "studies", "where": {"key": study_key, "value": study_value}},
         {"key": "materials"},
         {"key": "samples", "where": {"key": sample_key, "value": sample_value}},
@@ -254,7 +252,6 @@ def make_assay_path(
     assay_key: str, assay_value: str,
 ) -> list[dict]:
     return [
-        {"key": "investigation"},
         {"key": "studies", "where": {"key": study_key, "value": study_value}},
         {"key": "assays", "where": {"key": assay_key, "value": assay_value}},
     ]
@@ -265,7 +262,6 @@ def make_source_path(
     source_key: str, source_value: str,
 ) -> list[dict]:
     return [
-        {"key": "investigation"},
         {"key": "studies", "where": {"key": study_key, "value": study_value}},
         {"key": "materials"},
         {"key": "sources", "where": {"key": source_key, "value": source_value}},
@@ -278,7 +274,6 @@ def make_other_material_path(
     om_key: str, om_value: str,
 ) -> list[dict]:
     return [
-        {"key": "investigation"},
         {"key": "studies", "where": {"key": study_key, "value": study_value}},
         {"key": "assays", "where": {"key": "@id", "value": assay_id}},
         {"key": "materials"},
@@ -292,7 +287,6 @@ def make_data_file_path(
     df_key: str, df_value: str,
 ) -> list[dict]:
     return [
-        {"key": "investigation"},
         {"key": "studies", "where": {"key": study_key, "value": study_value}},
         {"key": "assays", "where": {"key": "@id", "value": assay_id}},
         {"key": "dataFiles", "where": {"key": df_key, "value": df_value}},

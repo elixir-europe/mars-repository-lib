@@ -25,7 +25,7 @@ def test_reset_mars_receipt():
 
 def test_set_mars_receipt_accessions():
     isa_json = _isa_json()
-    assay = isa_json["investigation"]["studies"][0]["assays"][0]
+    assay = isa_json["studies"][0]["assays"][0]
     studies = ReceiptAccessionsMap("id")
     studies.accession_map[assay["@id"]] = "PRJ123456"
     data_files = ReceiptAccessionsMap("id")
@@ -40,6 +40,8 @@ def test_set_mars_receipt_accessions():
     )
     assert receipt["target_repository"] == "test-repository"
     assert len(receipt["accessions"]) == 1 + len(assay["dataFiles"])
+    assert all(accession["path"][0]["key"] == "studies" for accession in receipt["accessions"])
+    assert all(path["key"] != "investigation" for accession in receipt["accessions"] for path in accession["path"])
     assert receipt.get("errors", []) == []
     assert receipt.get("info", []) == []
 
