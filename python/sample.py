@@ -5,8 +5,7 @@ from mars_repository import IsaJson, ReceiptAccessionsMap, build_mars_receipt, m
 
 ENA_ISA_JSON = """
 {
-  "investigation": {
-    "identifier": "i1",
+  "identifier": "i1",
     "studies": [{
         "identifier": "comparative-analysis",
         "title": "comparative-analysis",
@@ -25,7 +24,7 @@ ENA_ISA_JSON = """
               {"name": "paired-data"}
             ]}
         ]}
-    ]}
+  ]
 }
 """
 

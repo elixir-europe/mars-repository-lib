@@ -13,7 +13,7 @@ from mars_repository.isa_json_graph_lookup import (
 def _assay():
     path = Path(__file__).parents[2] / "MARS/test-data/biosamples-input-isa-multi.json"
     isa_json = json.loads(path.read_text())
-    return isa_json["investigation"]["studies"][0]["assays"][0]
+    return isa_json["studies"][0]["assays"][0]
 
 
 def test_find_process_by_output_id():
