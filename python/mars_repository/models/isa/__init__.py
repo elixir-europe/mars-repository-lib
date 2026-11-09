@@ -1,5 +1,4 @@
 from .isa_json import IsaJson
-from .investigation import Investigation
 from .study import Study
 from .assay import Assay
 from .materials import Materials
@@ -36,7 +35,6 @@ from .component_type import ComponentType
 
 __all__ = [
     "IsaJson",
-    "Investigation",
     "Study",
     "Assay",
     "Materials",

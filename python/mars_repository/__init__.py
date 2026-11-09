@@ -29,7 +29,6 @@ from .models.receipt import (
 )
 from .models.isa import (
     IsaJson,
-    Investigation,
     Study,
     Assay,
     Materials,
@@ -90,7 +89,6 @@ __all__ = [
     "MarsWhere",
     "MarsAccession",
     "IsaJson",
-    "Investigation",
     "Study",
     "Assay",
     "Materials",
