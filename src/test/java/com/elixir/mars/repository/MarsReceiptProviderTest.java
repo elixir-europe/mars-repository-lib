@@ -1,7 +1,6 @@
 package com.elixir.mars.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.elixir.mars.repository.models.isa.Assay;
@@ -16,6 +15,9 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -43,9 +45,96 @@ class MarsReceiptProviderTest {
         provider.build(null, null, null, null, null, List.of("info"), List.of("error"));
         provider.resetMarsReceipt();
         MarsReceipt reset = provider.getMarsReceipt();
-        assertNotEquals(initial.errors, reset.errors);
-        assertNotEquals(initial.info, reset.info);
+        assertTrue(initial.errors.isEmpty());
+        assertTrue(initial.info.isEmpty());
         assertTrue(reset.accessions.isEmpty());
+    }
+
+    @Test
+    void testBuildMarsReceiptResetsAllStateBetweenRequests() {
+        TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
+        Assay assay = isaJson.getStudies().get(0).getAssays().get(0);
+        ReceiptAccessionsMap studiesMap = new ReceiptAccessionsMap() {
+            {
+                isaItemName = Assay.Fields.id;
+                accessionMap = Map.of(assay.getId(), "PRJ123456");
+            }
+        };
+
+        provider.build(
+                studiesMap,
+                null,
+                null,
+                null,
+                null,
+                List.of("first info"),
+                List.of("first error"));
+        assertTrue(provider.getMarsReceipt().accessions.size() > 0);
+
+        provider.build(
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of("second info"),
+                List.of("second error"));
+        MarsReceipt second = provider.getMarsReceipt();
+        assertTrue(second.accessions.isEmpty());
+        assertEquals(1, second.errors.size());
+        assertEquals("second error", second.errors.get(0).message);
+        assertEquals(1, second.info.size());
+        assertEquals("second info", second.info.get(0).message);
+
+        provider.build(null, null, null, null, null, null, null);
+        MarsReceipt empty = provider.getMarsReceipt();
+        assertTrue(empty.accessions.isEmpty());
+        assertTrue(empty.errors.isEmpty());
+        assertTrue(empty.info.isEmpty());
+        assertEquals("test-repository", empty.targetRepository);
+    }
+
+    @Test
+    void testConcurrentBuildOnSameProviderUsesThreadLocalState() throws Exception {
+        TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            var first = executor.submit(
+                    () -> provider.buildAndGet(
+                            null, null, null, null, null, List.of("first-info"), null));
+            var second = executor.submit(
+                    () -> provider.buildAndGet(
+                            null, null, null, null, null, List.of("second-info"), null));
+
+            assertEquals("first-info", first.get(5, TimeUnit.SECONDS).info.get(0).message);
+            assertEquals("second-info", second.get(5, TimeUnit.SECONDS).info.get(0).message);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void testSeparateProvidersCanBuildConcurrently() throws Exception {
+        TestMarsReceiptProvider firstProvider = new TestMarsReceiptProvider("first-repository");
+        TestMarsReceiptProvider secondProvider = new TestMarsReceiptProvider("second-repository");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            var first = executor.submit(
+                    () -> firstProvider.buildAndGet(
+                            null, null, null, null, null, List.of("first-info"), null));
+            var second = executor.submit(
+                    () -> secondProvider.buildAndGet(
+                            null, null, null, null, null, List.of("second-info"), null));
+
+            assertEquals("first-repository", first.get(5, TimeUnit.SECONDS).targetRepository);
+            assertEquals("second-repository", second.get(5, TimeUnit.SECONDS).targetRepository);
+            assertEquals("first-info", first.get().info.get(0).message);
+            assertEquals("second-info", second.get().info.get(0).message);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -107,6 +196,18 @@ class MarsReceiptProviderTest {
                 List<String> info,
                 List<String> errors) {
             buildMarsReceipt(studies, samples, sources, otherMaterials, dataFiles, info, errors, isaJson);
+        }
+
+        MarsReceipt buildAndGet(
+                ReceiptAccessionsMap studies,
+                ReceiptAccessionsMap samples,
+                ReceiptAccessionsMap sources,
+                ReceiptAccessionsMap otherMaterials,
+                ReceiptAccessionsMap dataFiles,
+                List<String> info,
+                List<String> errors) {
+            build(studies, samples, sources, otherMaterials, dataFiles, info, errors);
+            return getMarsReceipt();
         }
 
         @Override

@@ -22,10 +22,8 @@ import java.util.Optional;
 
 public abstract class MarsReceiptProvider {
 
-    private MarsReceipt.MarsReceiptBuilder marsReceiptBuilder;
-    private MarsMessage marsMessage;
-    private List<MarsAccession> marsAccessions;
     private final String targetRepository;
+    private final ThreadLocal<ReceiptState> state = new ThreadLocal<>();
 
     private class ReceiptAccessionMap {
         public String isaItemName;
@@ -34,36 +32,81 @@ public abstract class MarsReceiptProvider {
         public String accession;
     }
 
+    private static final class ReceiptState {
+        private final String targetRepository;
+        private final MarsMessage message = MarsMessage.builder().build();
+        private final List<MarsAccession> accessions = new ArrayList<>();
+        private boolean buildCompleted;
+        private boolean buildFailed;
+
+        private ReceiptState(final String targetRepository) {
+            this.targetRepository = targetRepository;
+        }
+
+        private MarsReceipt toReceipt() {
+            return MarsReceipt.builder()
+                    .targetRepository(targetRepository)
+                    .errors(List.copyOf(message.errors))
+                    .info(List.copyOf(message.info))
+                    .accessions(List.copyOf(accessions))
+                    .build();
+        }
+    }
+
     public MarsReceiptProvider(final String targetRepository) {
         this.targetRepository = targetRepository;
-        resetMarsReceipt();
+        state.set(new ReceiptState(targetRepository));
     }
 
     public abstract String convertMarsReceiptToJson();
 
+    /**
+     * Resets receipt state for existing callers.
+     *
+     * @deprecated Receipt state is initialized per thread and cleaned after
+     *     getMarsReceipt(); retained temporarily for existing consumers.
+     */
+    @Deprecated
     public void resetMarsReceipt() {
-        marsMessage = MarsMessage.builder().build();
-        marsAccessions = new ArrayList<>();
-        marsReceiptBuilder = MarsReceipt.builder()
-                .targetRepository(targetRepository)
-                .accessions(marsAccessions)
-                .errors(marsMessage.errors)
-                .info(marsMessage.info);
+        state.set(new ReceiptState(targetRepository));
     }
 
-    public MarsReceipt getMarsReceipt() {
-        return marsReceiptBuilder.build();
+    private ReceiptState currentState() {
+        ReceiptState current = state.get();
+        if (current == null) {
+            throw new IllegalStateException("Receipt state is not active on this thread");
+        }
+        return current;
+    }
+
+    private ReceiptState stateForBuild() {
+        ReceiptState current = state.get();
+        if (current == null || current.buildCompleted || current.buildFailed) {
+            current = new ReceiptState(targetRepository);
+            state.set(current);
+        }
+        return current;
     }
 
     /**
-     * Converts target receipt to Mars data format
-     *
-     * @param isaJson Requested ISA-Json
-     * @param info    List of info messages
-     * @param errors  List of error messages
-     * @see https://github.com/elixir-europe/MARS/blob/refactor/repository-services/repository-api.md#response
+     * @deprecated Use the receipt returned by `buildMarsReceipt(...)`.
      */
-    protected void buildMarsReceipt(
+    @Deprecated
+    public MarsReceipt getMarsReceipt() {
+        ReceiptState current = state.get();
+        if (current == null) {
+            throw new IllegalStateException("No active receipt state on this thread");
+        }
+
+        MarsReceipt result = current.toReceipt();
+        state.remove();
+        return result;
+    }
+
+    /**
+     * Builds a receipt using the existing request/build API.
+     */
+    protected MarsReceipt buildMarsReceipt(
             final ReceiptAccessionsMap studiesAccessionsMap,
             final ReceiptAccessionsMap samplesAccessionsMap,
             final ReceiptAccessionsMap sourcesAccessionsMap,
@@ -72,27 +115,29 @@ public abstract class MarsReceiptProvider {
             final List<String> info,
             final List<String> errors,
             final IsaJson isaJson) {
-        final String[] errorArray = Optional.ofNullable(errors).orElse(new ArrayList<>()).toArray(String[]::new);
-        final String[] infoArray = Optional.ofNullable(info).orElse(new ArrayList<>()).toArray(String[]::new);
-
-        setMarsReceiptErrors(MarsErrorType.INVALID_METADATA, errorArray);
-        setMarsReceiptInfo(infoArray);
-        setMarsAccessions(
-                studiesAccessionsMap,
-                samplesAccessionsMap,
-                sourcesAccessionsMap,
-                otherMaterialsAccessionsMap,
-                dataFilesAccessionsMap,
-                isaJson);
-        marsReceiptBuilder
-                .accessions(marsAccessions)
-                .errors(marsMessage.errors)
-                .info(marsMessage.info);
+        ReceiptState current = stateForBuild();
+        try {
+            setMarsReceiptErrors(MarsErrorType.INVALID_METADATA,
+                    Optional.ofNullable(errors).orElse(List.of()).toArray(String[]::new));
+            setMarsReceiptInfo(Optional.ofNullable(info).orElse(List.of()).toArray(String[]::new));
+            setMarsAccessions(
+                    studiesAccessionsMap,
+                    samplesAccessionsMap,
+                    sourcesAccessionsMap,
+                    otherMaterialsAccessionsMap,
+                    dataFilesAccessionsMap,
+                    isaJson);
+            current.buildCompleted = true;
+            return current.toReceipt();
+        } catch (RuntimeException exception) {
+            current.buildFailed = true;
+            throw exception;
+        }
     }
 
     protected void setMarsReceiptErrors(MarsErrorType type, final MarsError... errors) {
         for (MarsError error : Optional.ofNullable(errors).filter(error -> error != null).get()) {
-            marsMessage.errors
+            currentState().message.errors
                     .add(
                             MarsError.builder()
                                     .message(error.message)
@@ -104,7 +149,7 @@ public abstract class MarsReceiptProvider {
 
     protected void setMarsReceiptErrors(MarsErrorType type, final String... errors) {
         for (String error : Optional.ofNullable(errors).orElse(new String[]{"Null message received"})) {
-            marsMessage.errors
+            currentState().message.errors
                     .add(
                             MarsError.builder()
                                     .message(error)
@@ -115,7 +160,7 @@ public abstract class MarsReceiptProvider {
 
     protected void setMarsReceiptInfo(final String... info) {
         for (String infoItem : Optional.ofNullable(info).orElse(new String[0])) {
-            marsMessage.info
+            currentState().message.info
                     .add(
                             MarsInfo.builder()
                                     .message(infoItem)
@@ -141,9 +186,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     assay -> {
                                                         ReceiptAccessionMap assayAccessionMap =
-                                                                getAccessionMapEntry(studiesAccessionsMap, assay, marsMessage);
+                                                                getAccessionMapEntry(studiesAccessionsMap, assay, currentState().message);
                                                         if (assayAccessionMap.accession != null) {
-                                                            marsAccessions.add(
+                                                            currentState().accessions.add(
                                                                     getAssayStudyMarsAccession(
                                                                             Map.entry(Study.Fields.title, study.title),
                                                                             assayAccessionMap));
@@ -151,9 +196,9 @@ public abstract class MarsReceiptProvider {
                                                     });
                                 } else {
                                     ReceiptAccessionMap studyAccessionMap =
-                                            getAccessionMapEntry(studiesAccessionsMap, study, marsMessage);
+                                            getAccessionMapEntry(studiesAccessionsMap, study, currentState().message);
                                     if (studyAccessionMap.accession != null) {
-                                        marsAccessions.add(getStudyMarsAccession(studyAccessionMap));
+                                        currentState().accessions.add(getStudyMarsAccession(studyAccessionMap));
                                     }
                                 }
                                 ReceiptAccessionMap studyAccessionMap = new ReceiptAccessionMap();
@@ -165,9 +210,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     sample -> {
                                                         ReceiptAccessionMap sampleAccessionMap = getAccessionMapEntry(
-                                                                samplesAccessionsMap, sample, marsMessage);
+                                                                samplesAccessionsMap, sample, currentState().message);
                                                         if (sampleAccessionMap.accession != null) {
-                                                            marsAccessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
+                                                            currentState().accessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
                                                         }
                                                     });
                                 }
@@ -177,9 +222,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     source -> {
                                                         ReceiptAccessionMap sourceAccessionMap = getAccessionMapEntry(
-                                                                sourcesAccessionsMap, source, marsMessage);
+                                                                sourcesAccessionsMap, source, currentState().message);
                                                         if (sourceAccessionMap.accession != null) {
-                                                            marsAccessions.add(getSourceMarsAccession(studyAccessionMap, sourceAccessionMap));
+                                                            currentState().accessions.add(getSourceMarsAccession(studyAccessionMap, sourceAccessionMap));
                                                         }
                                                     });
                                 }
@@ -194,9 +239,9 @@ public abstract class MarsReceiptProvider {
                                                                     .forEach(
                                                                             otherMaterial -> {
                                                                                 ReceiptAccessionMap otherMaterialAccessionMap = getAccessionMapEntry(
-                                                                                        otherMaterialsAccessionsMap, otherMaterial, marsMessage);
+                                                                                        otherMaterialsAccessionsMap, otherMaterial, currentState().message);
                                                                                 if (otherMaterialAccessionMap.accession != null) {
-                                                                                    marsAccessions.add(getOtherMaterialMarsAccession(
+                                                                                    currentState().accessions.add(getOtherMaterialMarsAccession(
                                                                                             studyAccessionMap,
                                                                                             assay.id,
                                                                                             otherMaterialAccessionMap));
@@ -209,9 +254,9 @@ public abstract class MarsReceiptProvider {
                                                                     .forEach(
                                                                             dataFile -> {
                                                                                 ReceiptAccessionMap dataFileAccessionMap = getAccessionMapEntry(
-                                                                                        dataFilesAccessionsMap, dataFile, marsMessage);
+                                                                                        dataFilesAccessionsMap, dataFile, currentState().message);
                                                                                 if (dataFileAccessionMap.accession != null) {
-                                                                                    marsAccessions.add(getDataFileMarsAccession(
+                                                                                    currentState().accessions.add(getDataFileMarsAccession(
                                                                                             studyAccessionMap,
                                                                                             assay.id,
                                                                                             dataFileAccessionMap));
@@ -457,7 +502,7 @@ public abstract class MarsReceiptProvider {
                 }
             };
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            marsMessage.errors
+            currentState().message.errors
                     .add(
                             MarsError.builder()
                                     .message(
