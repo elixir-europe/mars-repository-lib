@@ -18,7 +18,7 @@ library instead of keeping local copies of the receipt and ISA model code.
 | Language | Directory | Package | Version |
 |---|---|---|---|
 | Java 17 | `src/` | `com.elixir.mars:mars-repository` | 0.0.3 |
-| Python ≥3.10 | `python/` | `mars-repository-py` | 0.0.2 |
+| Python ≥3.10 | `python/` | `mars-repository-py` | 0.0.3 |
 
 Functionality between the two languages should be kept in sync for released versions.
 

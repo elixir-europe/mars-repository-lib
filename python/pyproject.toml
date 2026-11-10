@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mars-repository-py"
-version = "0.0.2"
+version = "0.0.3"
 description = "Python version of the MARS Repository Library"
 license = { text = "Apache 2.0" }
 requires-python = ">=3.10"
