@@ -1,6 +1,7 @@
 package com.elixir.mars.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.elixir.mars.repository.models.isa.Assay;
@@ -92,6 +93,18 @@ class MarsReceiptProviderTest {
         assertTrue(empty.errors.isEmpty());
         assertTrue(empty.info.isEmpty());
         assertEquals("test-repository", empty.targetRepository);
+    }
+
+    @Test
+    void testFailedBuildStartsFreshStateOnNextBuild() {
+        TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
+
+        assertThrows(NullPointerException.class, () -> provider.buildWithIsaJson(null));
+
+        provider.build(null, null, null, null, null, List.of("recovered"), null);
+        MarsReceipt recovered = provider.getMarsReceipt();
+        assertEquals("recovered", recovered.info.get(0).message);
+        assertTrue(recovered.errors.isEmpty());
     }
 
     @Test
@@ -196,6 +209,10 @@ class MarsReceiptProviderTest {
                 List<String> info,
                 List<String> errors) {
             buildMarsReceipt(studies, samples, sources, otherMaterials, dataFiles, info, errors, isaJson);
+        }
+
+        void buildWithIsaJson(IsaJson input) {
+            buildMarsReceipt(null, null, null, null, null, null, null, input);
         }
 
         MarsReceipt buildAndGet(

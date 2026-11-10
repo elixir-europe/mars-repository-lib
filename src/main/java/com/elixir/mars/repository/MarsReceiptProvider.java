@@ -32,12 +32,18 @@ public abstract class MarsReceiptProvider {
         public String accession;
     }
 
+    private enum ReceiptPhase {
+        READY,
+        BUILDING,
+        COMPLETED,
+        FAILED
+    }
+
     private static final class ReceiptState {
         private final String targetRepository;
         private final MarsMessage message = MarsMessage.builder().build();
         private final List<MarsAccession> accessions = new ArrayList<>();
-        private boolean buildCompleted;
-        private boolean buildFailed;
+        private ReceiptPhase phase = ReceiptPhase.READY;
 
         private ReceiptState(final String targetRepository) {
             this.targetRepository = targetRepository;
@@ -81,10 +87,13 @@ public abstract class MarsReceiptProvider {
 
     private ReceiptState stateForBuild() {
         ReceiptState current = state.get();
-        if (current == null || current.buildCompleted || current.buildFailed) {
+        if (current == null
+                || current.phase == ReceiptPhase.COMPLETED
+                || current.phase == ReceiptPhase.FAILED) {
             current = new ReceiptState(targetRepository);
             state.set(current);
         }
+        current.phase = ReceiptPhase.BUILDING;
         return current;
     }
 
@@ -127,10 +136,10 @@ public abstract class MarsReceiptProvider {
                     otherMaterialsAccessionsMap,
                     dataFilesAccessionsMap,
                     isaJson);
-            current.buildCompleted = true;
+            current.phase = ReceiptPhase.COMPLETED;
             return current.toReceipt();
         } catch (RuntimeException exception) {
-            current.buildFailed = true;
+            current.phase = ReceiptPhase.FAILED;
             throw exception;
         }
     }
