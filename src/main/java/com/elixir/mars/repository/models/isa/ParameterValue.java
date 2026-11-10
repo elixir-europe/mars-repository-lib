@@ -6,7 +6,7 @@ import lombok.experimental.FieldNameConstants;
 @Data
 @FieldNameConstants
 public class ParameterValue {
-  public Category category;
-  public Value value;
-  public Unit unit;
+    public Category category;
+    public Value value;
+    public Unit unit;
 }

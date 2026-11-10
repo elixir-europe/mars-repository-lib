@@ -6,7 +6,7 @@ import lombok.experimental.FieldNameConstants;
 @Data
 @FieldNameConstants
 public class Value {
-  public String annotationValue;
-  public String termSource;
-  public String termAccession;
+    public String annotationValue;
+    public String termSource;
+    public String termAccession;
 }
