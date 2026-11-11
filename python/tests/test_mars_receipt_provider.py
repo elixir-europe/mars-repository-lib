@@ -5,7 +5,7 @@ from mars_repository import ReceiptAccessionsMap, build_mars_receipt
 
 
 def _isa_json():
-    path = Path(__file__).parents[2] / "MARS/test-data/biosamples-input-isa-multi.json"
+    path = Path(__file__).parents[2] / "MARS/test-data/ena-complete.json"
     return json.loads(path.read_text())
 
 

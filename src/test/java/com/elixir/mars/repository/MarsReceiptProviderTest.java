@@ -21,7 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class MarsReceiptProviderTest {
-    private static final String ISA_JSON = "MARS/test-data/biosamples-input-isa-multi.json";
+    private static final String ISA_JSON = "MARS/test-data/ena-complete.json";
     private static IsaJson isaJson;
 
     @BeforeAll

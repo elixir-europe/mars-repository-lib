@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class IsaJsonGraphLookupTest {
-    private static final String ISA_JSON = "MARS/test-data/biosamples-input-isa-multi.json";
+    private static final String ISA_JSON = "MARS/test-data/ena-complete.json";
 
     private static Assay assay;
 
@@ -58,7 +58,7 @@ class IsaJsonGraphLookupTest {
     void testFindDataFilesFromProcessOutputs() {
         ProcessSequence process = assay.getProcessSequence().get(2);
         List<DataFile> dataFiles = IsaJsonGraphLookup.findDataFilesFromProcessOutputs(process, assay.getDataFiles());
-        assertEquals(List.of("#data/334", "#data/335"), dataFiles.stream().map(DataFile::getId).toList());
+        assertEquals(List.of("#data_file/334", "#data_file/335"), dataFiles.stream().map(DataFile::getId).toList());
     }
 
     @Test
