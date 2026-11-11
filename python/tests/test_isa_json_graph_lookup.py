@@ -9,14 +9,22 @@ from mars_repository.isa_json_graph_lookup import (
     find_process_by_output_id,
     find_process_input_ids,
     find_process_output_ids,
+    find_submission_id,
     normalize_data_file_id,
 )
 
 
-def _assay():
+def _isa_json():
     path = Path(__file__).parents[2] / "MARS/test-data/ena-complete.json"
     isa_json = json.loads(path.read_text())
-    return isa_json["studies"][0]["assays"][0]
+    # Add submission ID as a comment in the assay
+    comments = isa_json["studies"][0]["assays"][0].get("comments", [])
+    comments.append({"name": "ena_submission_id", "value": "submission-123"})
+    return isa_json
+
+
+def _assay():
+    return _isa_json()["studies"][0]["assays"][0]
 
 
 def test_find_process_by_output_id():
@@ -51,6 +59,12 @@ def test_normalize_data_file_id():
     assert normalize_data_file_id("#data/334") == "#data/334"
     assert normalize_data_file_id("#sample/331") == "#sample/331"
     assert normalize_data_file_id(None) is None
+
+
+def test_find_submission_id_for_repository():
+    isa_json = _isa_json()
+    assert find_submission_id(isa_json, "ena") == "submission-123"
+    assert find_submission_id(isa_json, "eva") is None
 
 
 # --- previousProcess/nextProcess fallbacks -------------------------------------------------------

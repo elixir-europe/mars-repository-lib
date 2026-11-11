@@ -17,6 +17,7 @@ from .isa_json_graph_lookup import (
     find_process_by_output_id,
     find_other_material_from_process_input,
     find_data_files_from_process_outputs,
+    find_submission_id,
 )
 from .models.receipt import (
     MarsReceipt,
@@ -26,6 +27,10 @@ from .models.receipt import (
     MarsPath,
     MarsWhere,
     MarsAccession,
+    MarsSubmissionStatus,
+    MarsAssayComment,
+    MarsFtpCredentials,
+    MarsInitiateResponse,
 )
 from .models.isa import (
     IsaJson,
@@ -81,6 +86,7 @@ __all__ = [
     "find_process_by_output_id",
     "find_other_material_from_process_input",
     "find_data_files_from_process_outputs",
+    "find_submission_id",
     "MarsReceipt",
     "MarsError",
     "MarsErrorType",
@@ -88,6 +94,10 @@ __all__ = [
     "MarsPath",
     "MarsWhere",
     "MarsAccession",
+    "MarsSubmissionStatus",
+    "MarsAssayComment",
+    "MarsFtpCredentials",
+    "MarsInitiateResponse",
     "IsaJson",
     "Study",
     "Assay",
