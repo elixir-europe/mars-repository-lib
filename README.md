@@ -90,7 +90,8 @@ To release a new library version:
 ### Creating a Receipt Provider
 
 Target repository integrations typically extend `MarsReceiptProvider`, collect
-repository accessions, and let the base class build the MARS receipt paths.
+repository accessions, and let the base class build a complete MARS receipt in one
+operation. The provider keeps no request or receipt state after the operation returns.
 
 ```java
 public final class ExampleRepoReceiptProvider extends MarsReceiptProvider {
@@ -99,13 +100,8 @@ public final class ExampleRepoReceiptProvider extends MarsReceiptProvider {
     super("example");
   }
 
-  @Override
-  public String convertMarsReceiptToJson() {
-    return getMarsReceipt().toString();
-  }
-
   public MarsReceipt convertReceiptToMars(final ExampleRepoReceipt receipt, final IsaJson isaJson) {
-    buildMarsReceipt(
+    return buildMarsReceipt(
         receipt.studyAccessionsMap,
         receipt.sampleAccessionsMap,
         receipt.sourceAccessionsMap,
@@ -114,7 +110,6 @@ public final class ExampleRepoReceiptProvider extends MarsReceiptProvider {
         receipt.info,
         receipt.errors,
         isaJson);
-    return getMarsReceipt();
   }
 }
 ```
