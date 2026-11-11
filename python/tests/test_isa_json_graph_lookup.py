@@ -11,7 +11,7 @@ from mars_repository.isa_json_graph_lookup import (
 
 
 def _assay():
-    path = Path(__file__).parents[2] / "MARS/test-data/biosamples-input-isa-multi.json"
+    path = Path(__file__).parents[2] / "MARS/test-data/ena-complete.json"
     isa_json = json.loads(path.read_text())
     return isa_json["studies"][0]["assays"][0]
 
@@ -35,7 +35,7 @@ def test_find_other_material_from_process_input():
 def test_find_data_files_from_process_outputs():
     assay = _assay()
     files = find_data_files_from_process_outputs(assay["processSequence"][2], assay["dataFiles"])
-    assert [item["@id"] for item in files] == ["#data/334", "#data/335"]
+    assert [item["@id"] for item in files] == ["#data_file/334", "#data_file/335"]
 
 
 def test_build_other_materials_by_id():
