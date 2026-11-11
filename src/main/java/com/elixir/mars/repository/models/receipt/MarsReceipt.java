@@ -15,4 +15,8 @@ public class MarsReceipt {
     public List<MarsInfo> info;
 
     public List<MarsAccession> accessions;
+
+    public MarsSubmissionStatus submissionStatus;
+
+    public List<MarsAssayComment> assayComments;
 }

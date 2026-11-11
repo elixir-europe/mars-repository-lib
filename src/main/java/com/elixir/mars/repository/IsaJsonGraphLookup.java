@@ -5,6 +5,7 @@ import com.elixir.mars.repository.models.isa.Assay;
 import com.elixir.mars.repository.models.isa.Comment;
 import com.elixir.mars.repository.models.isa.IsaJson;
 import com.elixir.mars.repository.models.isa.Study;
+import com.elixir.mars.repository.models.isa.Input;
 import com.elixir.mars.repository.models.isa.Materials;
 import com.elixir.mars.repository.models.isa.OtherMaterial;
 import com.elixir.mars.repository.models.isa.ProcessSequence;
