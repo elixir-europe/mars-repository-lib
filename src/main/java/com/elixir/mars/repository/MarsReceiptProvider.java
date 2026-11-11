@@ -23,33 +23,19 @@ import java.util.Optional;
 public abstract class MarsReceiptProvider {
 
     private final String targetRepository;
-    private final ThreadLocal<ReceiptState> state = new ThreadLocal<>();
 
-    private class ReceiptAccessionMap {
+    private static class ReceiptAccessionMap {
         public String isaItemName;
         public String isaFieldKey;
         public String isaFieldValue;
         public String accession;
     }
 
-    private enum ReceiptPhase {
-        READY,
-        BUILDING,
-        COMPLETED,
-        FAILED
-    }
-
-    private static final class ReceiptState {
-        private final String targetRepository;
+    private static final class ReceiptContext {
         private final MarsMessage message = MarsMessage.builder().build();
         private final List<MarsAccession> accessions = new ArrayList<>();
-        private ReceiptPhase phase = ReceiptPhase.READY;
 
-        private ReceiptState(final String targetRepository) {
-            this.targetRepository = targetRepository;
-        }
-
-        private MarsReceipt toReceipt() {
+        private MarsReceipt toReceipt(final String targetRepository) {
             return MarsReceipt.builder()
                     .targetRepository(targetRepository)
                     .errors(List.copyOf(message.errors))
@@ -61,59 +47,14 @@ public abstract class MarsReceiptProvider {
 
     public MarsReceiptProvider(final String targetRepository) {
         this.targetRepository = targetRepository;
-        state.set(new ReceiptState(targetRepository));
     }
 
-    public abstract String convertMarsReceiptToJson();
-
     /**
-     * Resets receipt state for existing callers.
+     * Builds a complete receipt from one invocation's inputs.
      *
-     * @deprecated Receipt state is initialized per thread and cleaned after
-     *     getMarsReceipt(); retained temporarily for existing consumers.
-     */
-    @Deprecated
-    public void resetMarsReceipt() {
-        state.set(new ReceiptState(targetRepository));
-    }
-
-    private ReceiptState currentState() {
-        ReceiptState current = state.get();
-        if (current == null) {
-            throw new IllegalStateException("Receipt state is not active on this thread");
-        }
-        return current;
-    }
-
-    private ReceiptState stateForBuild() {
-        ReceiptState current = state.get();
-        if (current == null
-                || current.phase == ReceiptPhase.COMPLETED
-                || current.phase == ReceiptPhase.FAILED) {
-            current = new ReceiptState(targetRepository);
-            state.set(current);
-        }
-        current.phase = ReceiptPhase.BUILDING;
-        return current;
-    }
-
-    /**
-     * @deprecated Use the receipt returned by `buildMarsReceipt(...)`.
-     */
-    @Deprecated
-    public MarsReceipt getMarsReceipt() {
-        ReceiptState current = state.get();
-        if (current == null) {
-            throw new IllegalStateException("No active receipt state on this thread");
-        }
-
-        MarsReceipt result = current.toReceipt();
-        state.remove();
-        return result;
-    }
-
-    /**
-     * Builds a receipt using the existing request/build API.
+     * <p>The provider owns no request or receipt state. All intermediate data is local to this
+     * invocation, so the same provider instance can be reused concurrently and across thread or
+     * asynchronous boundaries after this method returns.
      */
     protected MarsReceipt buildMarsReceipt(
             final ReceiptAccessionsMap studiesAccessionsMap,
@@ -124,66 +65,51 @@ public abstract class MarsReceiptProvider {
             final List<String> info,
             final List<String> errors,
             final IsaJson isaJson) {
-        ReceiptState current = stateForBuild();
-        try {
-            setMarsReceiptErrors(MarsErrorType.INVALID_METADATA,
-                    Optional.ofNullable(errors).orElse(List.of()).toArray(String[]::new));
-            setMarsReceiptInfo(Optional.ofNullable(info).orElse(List.of()).toArray(String[]::new));
-            setMarsAccessions(
-                    studiesAccessionsMap,
-                    samplesAccessionsMap,
-                    sourcesAccessionsMap,
-                    otherMaterialsAccessionsMap,
-                    dataFilesAccessionsMap,
-                    isaJson);
-            current.phase = ReceiptPhase.COMPLETED;
-            return current.toReceipt();
-        } catch (RuntimeException exception) {
-            current.phase = ReceiptPhase.FAILED;
-            throw exception;
-        }
+        final ReceiptContext context = new ReceiptContext();
+        addMarsReceiptErrors(
+                context,
+                MarsErrorType.INVALID_METADATA,
+                Optional.ofNullable(errors).orElse(List.of()).toArray(String[]::new));
+        addMarsReceiptInfo(context, Optional.ofNullable(info).orElse(List.of()).toArray(String[]::new));
+        addMarsAccessions(
+                studiesAccessionsMap,
+                samplesAccessionsMap,
+                sourcesAccessionsMap,
+                otherMaterialsAccessionsMap,
+                dataFilesAccessionsMap,
+                isaJson,
+                context);
+        return context.toReceipt(targetRepository);
     }
 
-    protected void setMarsReceiptErrors(MarsErrorType type, final MarsError... errors) {
-        for (MarsError error : Optional.ofNullable(errors).filter(error -> error != null).get()) {
-            currentState().message.errors
-                    .add(
-                            MarsError.builder()
-                                    .message(error.message)
-                                    .path(error.path)
-                                    .type(type)
-                                    .build());
-        }
-    }
-
-    protected void setMarsReceiptErrors(MarsErrorType type, final String... errors) {
+    private void addMarsReceiptErrors(
+            final ReceiptContext context, final MarsErrorType type, final String... errors) {
         for (String error : Optional.ofNullable(errors).orElse(new String[]{"Null message received"})) {
-            currentState().message.errors
-                    .add(
-                            MarsError.builder()
-                                    .message(error)
-                                    .type(type)
-                                    .build());
+            context.message.errors.add(
+                    MarsError.builder()
+                            .message(error)
+                            .type(type)
+                            .build());
         }
     }
 
-    protected void setMarsReceiptInfo(final String... info) {
+    private void addMarsReceiptInfo(final ReceiptContext context, final String... info) {
         for (String infoItem : Optional.ofNullable(info).orElse(new String[0])) {
-            currentState().message.info
-                    .add(
-                            MarsInfo.builder()
-                                    .message(infoItem)
-                                    .build());
+            context.message.info.add(
+                    MarsInfo.builder()
+                            .message(infoItem)
+                            .build());
         }
     }
 
-    protected void setMarsAccessions(
+    private void addMarsAccessions(
             final ReceiptAccessionsMap studiesAccessionsMap,
             final ReceiptAccessionsMap samplesAccessionsMap,
             final ReceiptAccessionsMap sourcesAccessionsMap,
             final ReceiptAccessionsMap otherMaterialsAccessionsMap,
             final ReceiptAccessionsMap dataFilesAccessionsMap,
-            final IsaJson isaJson) {
+            final IsaJson isaJson,
+            final ReceiptContext context) {
         Optional.ofNullable(isaJson.studies)
                 .orElse(new ArrayList<>())
                 .forEach(
@@ -195,9 +121,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     assay -> {
                                                         ReceiptAccessionMap assayAccessionMap =
-                                                                getAccessionMapEntry(studiesAccessionsMap, assay, currentState().message);
+                                                                getAccessionMapEntry(studiesAccessionsMap, assay, context);
                                                         if (assayAccessionMap.accession != null) {
-                                                            currentState().accessions.add(
+                                                            context.accessions.add(
                                                                     getAssayStudyMarsAccession(
                                                                             Map.entry(Study.Fields.title, study.title),
                                                                             assayAccessionMap));
@@ -205,9 +131,9 @@ public abstract class MarsReceiptProvider {
                                                     });
                                 } else {
                                     ReceiptAccessionMap studyAccessionMap =
-                                            getAccessionMapEntry(studiesAccessionsMap, study, currentState().message);
+                                            getAccessionMapEntry(studiesAccessionsMap, study, context);
                                     if (studyAccessionMap.accession != null) {
-                                        currentState().accessions.add(getStudyMarsAccession(studyAccessionMap));
+                                        context.accessions.add(getStudyMarsAccession(studyAccessionMap));
                                     }
                                 }
                                 ReceiptAccessionMap studyAccessionMap = new ReceiptAccessionMap();
@@ -219,9 +145,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     sample -> {
                                                         ReceiptAccessionMap sampleAccessionMap = getAccessionMapEntry(
-                                                                samplesAccessionsMap, sample, currentState().message);
+                                                                samplesAccessionsMap, sample, context);
                                                         if (sampleAccessionMap.accession != null) {
-                                                            currentState().accessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
+                                                            context.accessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
                                                         }
                                                     });
                                 }
@@ -231,9 +157,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     source -> {
                                                         ReceiptAccessionMap sourceAccessionMap = getAccessionMapEntry(
-                                                                sourcesAccessionsMap, source, currentState().message);
+                                                                sourcesAccessionsMap, source, context);
                                                         if (sourceAccessionMap.accession != null) {
-                                                            currentState().accessions.add(getSourceMarsAccession(studyAccessionMap, sourceAccessionMap));
+                                                            context.accessions.add(getSourceMarsAccession(studyAccessionMap, sourceAccessionMap));
                                                         }
                                                     });
                                 }
@@ -248,9 +174,9 @@ public abstract class MarsReceiptProvider {
                                                                     .forEach(
                                                                             otherMaterial -> {
                                                                                 ReceiptAccessionMap otherMaterialAccessionMap = getAccessionMapEntry(
-                                                                                        otherMaterialsAccessionsMap, otherMaterial, currentState().message);
+                                                                                        otherMaterialsAccessionsMap, otherMaterial, context);
                                                                                 if (otherMaterialAccessionMap.accession != null) {
-                                                                                    currentState().accessions.add(getOtherMaterialMarsAccession(
+                                                                                    context.accessions.add(getOtherMaterialMarsAccession(
                                                                                             studyAccessionMap,
                                                                                             assay.id,
                                                                                             otherMaterialAccessionMap));
@@ -263,9 +189,9 @@ public abstract class MarsReceiptProvider {
                                                                     .forEach(
                                                                             dataFile -> {
                                                                                 ReceiptAccessionMap dataFileAccessionMap = getAccessionMapEntry(
-                                                                                        dataFilesAccessionsMap, dataFile, currentState().message);
+                                                                                        dataFilesAccessionsMap, dataFile, context);
                                                                                 if (dataFileAccessionMap.accession != null) {
-                                                                                    currentState().accessions.add(getDataFileMarsAccession(
+                                                                                    context.accessions.add(getDataFileMarsAccession(
                                                                                             studyAccessionMap,
                                                                                             assay.id,
                                                                                             dataFileAccessionMap));
@@ -495,7 +421,7 @@ public abstract class MarsReceiptProvider {
     private <T> ReceiptAccessionMap getAccessionMapEntry(
             final ReceiptAccessionsMap accessionsMap,
             final T item,
-            final MarsMessage marsMessage) {
+            final ReceiptContext context) {
         try {
             return new ReceiptAccessionMap() {
                 {
@@ -511,7 +437,7 @@ public abstract class MarsReceiptProvider {
                 }
             };
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            currentState().message.errors
+            context.message.errors
                     .add(
                             MarsError.builder()
                                     .message(

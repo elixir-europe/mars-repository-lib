@@ -35,24 +35,19 @@ class MarsReceiptProviderTest {
     }
 
     @Test
-    void testResetMarsReceipt() {
+    void testBuildMarsReceiptReturnsCompleteReceipt() {
         TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
-        MarsReceipt initial = provider.getMarsReceipt();
-        assertEquals("test-repository", initial.targetRepository);
-        assertTrue(initial.accessions.isEmpty());
-        assertTrue(initial.errors.isEmpty());
-        assertTrue(initial.info.isEmpty());
 
-        provider.build(null, null, null, null, null, List.of("info"), List.of("error"));
-        provider.resetMarsReceipt();
-        MarsReceipt reset = provider.getMarsReceipt();
-        assertTrue(initial.errors.isEmpty());
-        assertTrue(initial.info.isEmpty());
-        assertTrue(reset.accessions.isEmpty());
+        MarsReceipt receipt = provider.build(null, null, null, null, null, List.of("info"), List.of("error"));
+
+        assertEquals("test-repository", receipt.targetRepository);
+        assertEquals("error", receipt.errors.get(0).message);
+        assertEquals("info", receipt.info.get(0).message);
+        assertTrue(receipt.accessions.isEmpty());
     }
 
     @Test
-    void testBuildMarsReceiptResetsAllStateBetweenRequests() {
+    void testEachBuildStartsWithFreshInvocationLocalState() {
         TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
         Assay assay = isaJson.getStudies().get(0).getAssays().get(0);
         ReceiptAccessionsMap studiesMap = new ReceiptAccessionsMap() {
@@ -62,63 +57,42 @@ class MarsReceiptProviderTest {
             }
         };
 
-        provider.build(
-                studiesMap,
-                null,
-                null,
-                null,
-                null,
-                List.of("first info"),
-                List.of("first error"));
-        assertTrue(provider.getMarsReceipt().accessions.size() > 0);
+        MarsReceipt first = provider.build(
+                studiesMap, null, null, null, null, List.of("first info"), List.of("first error"));
+        MarsReceipt second = provider.build(
+                null, null, null, null, null, List.of("second info"), List.of("second error"));
+        MarsReceipt empty = provider.build(null, null, null, null, null, null, null);
 
-        provider.build(
-                null,
-                null,
-                null,
-                null,
-                null,
-                List.of("second info"),
-                List.of("second error"));
-        MarsReceipt second = provider.getMarsReceipt();
-        assertTrue(second.accessions.isEmpty());
-        assertEquals(1, second.errors.size());
+        assertTrue(first.accessions.size() > 0);
         assertEquals("second error", second.errors.get(0).message);
-        assertEquals(1, second.info.size());
         assertEquals("second info", second.info.get(0).message);
-
-        provider.build(null, null, null, null, null, null, null);
-        MarsReceipt empty = provider.getMarsReceipt();
-        assertTrue(empty.accessions.isEmpty());
+        assertTrue(second.accessions.isEmpty());
         assertTrue(empty.errors.isEmpty());
         assertTrue(empty.info.isEmpty());
-        assertEquals("test-repository", empty.targetRepository);
+        assertTrue(empty.accessions.isEmpty());
     }
 
     @Test
-    void testFailedBuildStartsFreshStateOnNextBuild() {
+    void testFailedBuildDoesNotAffectNextBuild() {
         TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
 
         assertThrows(NullPointerException.class, () -> provider.buildWithIsaJson(null));
 
-        provider.build(null, null, null, null, null, List.of("recovered"), null);
-        MarsReceipt recovered = provider.getMarsReceipt();
+        MarsReceipt recovered = provider.build(null, null, null, null, null, List.of("recovered"), null);
         assertEquals("recovered", recovered.info.get(0).message);
         assertTrue(recovered.errors.isEmpty());
     }
 
     @Test
-    void testConcurrentBuildOnSameProviderUsesThreadLocalState() throws Exception {
+    void testConcurrentBuildsOnSameProviderUseIndependentLocalState() throws Exception {
         TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         try {
             var first = executor.submit(
-                    () -> provider.buildAndGet(
-                            null, null, null, null, null, List.of("first-info"), null));
+                    () -> provider.build(null, null, null, null, null, List.of("first-info"), null));
             var second = executor.submit(
-                    () -> provider.buildAndGet(
-                            null, null, null, null, null, List.of("second-info"), null));
+                    () -> provider.build(null, null, null, null, null, List.of("second-info"), null));
 
             assertEquals("first-info", first.get(5, TimeUnit.SECONDS).info.get(0).message);
             assertEquals("second-info", second.get(5, TimeUnit.SECONDS).info.get(0).message);
@@ -128,23 +102,14 @@ class MarsReceiptProviderTest {
     }
 
     @Test
-    void testSeparateProvidersCanBuildConcurrently() throws Exception {
-        TestMarsReceiptProvider firstProvider = new TestMarsReceiptProvider("first-repository");
-        TestMarsReceiptProvider secondProvider = new TestMarsReceiptProvider("second-repository");
-        ExecutorService executor = Executors.newFixedThreadPool(2);
+    void testReceiptCanBeConsumedOnAnotherThreadAfterBuild() throws Exception {
+        TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
 
         try {
-            var first = executor.submit(
-                    () -> firstProvider.buildAndGet(
-                            null, null, null, null, null, List.of("first-info"), null));
-            var second = executor.submit(
-                    () -> secondProvider.buildAndGet(
-                            null, null, null, null, null, List.of("second-info"), null));
-
-            assertEquals("first-repository", first.get(5, TimeUnit.SECONDS).targetRepository);
-            assertEquals("second-repository", second.get(5, TimeUnit.SECONDS).targetRepository);
-            assertEquals("first-info", first.get().info.get(0).message);
-            assertEquals("second-info", second.get().info.get(0).message);
+            MarsReceipt receipt = provider.build(null, null, null, null, null, List.of("cross-thread"), null);
+            var result = executor.submit(() -> receipt.info.get(0).message);
+            assertEquals("cross-thread", result.get(5, TimeUnit.SECONDS));
         } finally {
             executor.shutdownNow();
         }
@@ -168,26 +133,25 @@ class MarsReceiptProviderTest {
             }
         };
         int idx = 0;
-        for (DataFile df : assay.getDataFiles()) {
-            dataFilesMap.accessionMap.put(df.getId(), "ERZ" + idx);
+        for (DataFile dataFile : assay.getDataFiles()) {
+            dataFilesMap.accessionMap.put(dataFile.getId(), "ERZ" + idx);
             idx++;
         }
-        provider.build(studiesMap, null, null, null, dataFilesMap, null, null);
-        MarsReceipt receipt = provider.getMarsReceipt();
+
+        MarsReceipt receipt = provider.build(studiesMap, null, null, null, dataFilesMap, null, null);
         assertEquals("test-repository", receipt.targetRepository);
         assertEquals(1 + assay.getDataFiles().size(), receipt.accessions.size());
-        assertTrue(receipt.getErrors().isEmpty());
-        assertTrue(receipt.getInfo().isEmpty());
+        assertTrue(receipt.errors.isEmpty());
+        assertTrue(receipt.info.isEmpty());
     }
 
     @Test
-    void testGetAccessionMapEntry_fieldDoesNotExist() {
+    void testMissingAccessionMapFieldIsReportedInReturnedReceipt() {
         TestMarsReceiptProvider provider = new TestMarsReceiptProvider("test-repository");
         ReceiptAccessionsMap studiesMap = new ReceiptAccessionsMap("missingField", "value");
 
-        provider.build(studiesMap, null, null, null, null, null, null);
+        MarsReceipt receipt = provider.build(studiesMap, null, null, null, null, null, null);
 
-        MarsReceipt receipt = provider.getMarsReceipt();
         assertEquals(1, receipt.errors.size());
         assertEquals(
                 "Cannot find an item of Study with the key missingField in the ISA-JSON input",
@@ -200,7 +164,7 @@ class MarsReceiptProviderTest {
             super(repository);
         }
 
-        void build(
+        MarsReceipt build(
                 ReceiptAccessionsMap studies,
                 ReceiptAccessionsMap samples,
                 ReceiptAccessionsMap sources,
@@ -208,28 +172,11 @@ class MarsReceiptProviderTest {
                 ReceiptAccessionsMap dataFiles,
                 List<String> info,
                 List<String> errors) {
-            buildMarsReceipt(studies, samples, sources, otherMaterials, dataFiles, info, errors, isaJson);
+            return buildMarsReceipt(studies, samples, sources, otherMaterials, dataFiles, info, errors, isaJson);
         }
 
-        void buildWithIsaJson(IsaJson input) {
-            buildMarsReceipt(null, null, null, null, null, null, null, input);
-        }
-
-        MarsReceipt buildAndGet(
-                ReceiptAccessionsMap studies,
-                ReceiptAccessionsMap samples,
-                ReceiptAccessionsMap sources,
-                ReceiptAccessionsMap otherMaterials,
-                ReceiptAccessionsMap dataFiles,
-                List<String> info,
-                List<String> errors) {
-            build(studies, samples, sources, otherMaterials, dataFiles, info, errors);
-            return getMarsReceipt();
-        }
-
-        @Override
-        public String convertMarsReceiptToJson() {
-            return "";
+        MarsReceipt buildWithIsaJson(IsaJson input) {
+            return buildMarsReceipt(null, null, null, null, null, null, null, input);
         }
     }
 }
