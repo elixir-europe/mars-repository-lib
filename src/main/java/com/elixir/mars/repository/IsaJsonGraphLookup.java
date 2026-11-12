@@ -3,12 +3,14 @@ package com.elixir.mars.repository;
 import com.elixir.mars.repository.models.isa.DataFile;
 import com.elixir.mars.repository.models.isa.Assay;
 import com.elixir.mars.repository.models.isa.Comment;
+import com.elixir.mars.repository.models.isa.DerivesFrom;
 import com.elixir.mars.repository.models.isa.IsaJson;
 import com.elixir.mars.repository.models.isa.Study;
 import com.elixir.mars.repository.models.isa.Input;
 import com.elixir.mars.repository.models.isa.Materials;
 import com.elixir.mars.repository.models.isa.OtherMaterial;
 import com.elixir.mars.repository.models.isa.ProcessSequence;
+import com.elixir.mars.repository.models.isa.Sample;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +28,9 @@ import java.util.Map;
  * <p>Declared process {@code inputs}/{@code outputs} always take precedence. A process that
  * declares none is resolved through its {@code previousProcess}/{@code nextProcess} links within
  * the process sequence it belongs to, so protocol chains without an intermediate material (e.g.
- * {@code growth culture -> sample collection}) still resolve.
+ * {@code growth culture -> sample collection}) still resolve. Likewise, a material without
+ * {@code derivesFrom} references derives from the inputs of the process that produced it (see
+ * {@link #findMaterialOriginIds}).
  */
 public final class IsaJsonGraphLookup {
     private static final String DATA_FILE_ID_PREFIX = "#data_file/";
@@ -231,6 +235,53 @@ public final class IsaJsonGraphLookup {
             return Collections.emptyList();
         }
         return new IsaProcessGraph(processSequence).getUpstreamLinkedProcesses(process);
+    }
+
+    /**
+     * Returns the IDs of the materials an other material derives from.
+     *
+     * <p>These are the declared {@code derivesFrom} references or, when the material declares none,
+     * the inputs of the process in {@code processSequence} that produced it (both resolved through
+     * {@code previousProcess}/{@code nextProcess} links, see {@link #findProcessByOutputId} and
+     * {@link #findProcessInputIds}). ISA exports may carry the material lineage only in the process
+     * sequence, e.g. {@code sample -> extraction -> extract -> library preparation -> library}.
+     */
+    public static List<String> findMaterialOriginIds(
+            final List<ProcessSequence> processSequence, final OtherMaterial material) {
+        return material == null
+                ? Collections.emptyList()
+                : findMaterialOriginIds(processSequence, material.getId(), material.getDerivesFrom());
+    }
+
+    /** Returns the IDs of the sources (or samples) a sample derives from, as {@link #findMaterialOriginIds(List, OtherMaterial)}. */
+    public static List<String> findMaterialOriginIds(
+            final List<ProcessSequence> processSequence, final Sample sample) {
+        return sample == null
+                ? Collections.emptyList()
+                : findMaterialOriginIds(processSequence, sample.getId(), sample.getDerivesFrom());
+    }
+
+    /**
+     * Returns the IDs in {@code derivesFrom} or, when there are none, the inputs of the process in
+     * {@code processSequence} whose outputs contain {@code materialId}.
+     */
+    public static List<String> findMaterialOriginIds(
+            final List<ProcessSequence> processSequence,
+            final String materialId,
+            final List<DerivesFrom> derivesFrom) {
+        final List<String> declared = new ArrayList<>();
+        if (derivesFrom != null) {
+            for (final DerivesFrom origin : derivesFrom) {
+                if (origin != null && origin.getId() != null) {
+                    declared.add(origin.getId());
+                }
+            }
+        }
+        if (!declared.isEmpty() || materialId == null) {
+            return declared;
+        }
+
+        return findProcessInputIds(processSequence, findProcessByOutputId(processSequence, materialId));
     }
 
     /**

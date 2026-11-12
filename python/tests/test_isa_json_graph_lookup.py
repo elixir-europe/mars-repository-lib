@@ -5,6 +5,7 @@ from mars_repository.isa_json_graph_lookup import (
     build_other_materials_by_id,
     find_data_files_from_process_outputs,
     find_linked_upstream_processes,
+    find_material_origin_ids,
     find_other_material_from_process_input,
     find_process_by_output_id,
     find_process_input_ids,
@@ -218,3 +219,36 @@ def test_cyclic_links_without_materials_terminate():
     assert find_process_output_ids(processes, first) == []
     assert find_linked_upstream_processes(processes, first) == [second]
     assert find_process_by_output_id(processes, "#sample/none") is None
+
+
+def test_material_without_derives_from_resolves_origin_through_producing_process():
+    study = _ptx_study()
+    assay = _rnaseq_assay(study)
+    processes = assay["processSequence"]
+    by_id = build_other_materials_by_id(assay["materials"])
+    sample_ids = {sample["@id"] for sample in study["materials"]["samples"]}
+    libraries = [m for m in by_id.values() if m["type"] == "Labeled Extract Name"]
+    assert libraries
+    # PTX assay materials only carry their lineage in the process sequence.
+    assert not any(m.get("derivesFrom") for m in by_id.values())
+
+    for library in libraries:
+        (extract_id,) = find_material_origin_ids(processes, library)
+        assert by_id[extract_id]["type"] == "Extract Name"
+        (sample_id,) = find_material_origin_ids(processes, by_id[extract_id])
+        assert sample_id in sample_ids
+    assert find_material_origin_ids(processes, None) == []
+
+
+def test_declared_derives_from_takes_precedence_over_process_lineage():
+    study = _ptx_study()
+    processes = study["processSequence"]
+    for sample in study["materials"]["samples"]:
+        declared = [origin["@id"] for origin in sample["derivesFrom"]]
+        assert len(declared) == 1
+        assert find_material_origin_ids(processes, sample) == declared
+
+        # Without derivesFrom, the sample collection process that outputs the sample declares no
+        # inputs, so the source is resolved through the growth culture it is chained to.
+        sample["derivesFrom"] = []
+        assert find_material_origin_ids(processes, sample) == declared

@@ -2,9 +2,11 @@ package com.elixir.mars.repository;
 
 import com.elixir.mars.repository.models.isa.Assay;
 import com.elixir.mars.repository.models.isa.DataFile;
+import com.elixir.mars.repository.models.isa.DerivesFrom;
 import com.elixir.mars.repository.models.isa.Input;
 import com.elixir.mars.repository.models.isa.IsaJson;
 import com.elixir.mars.repository.models.isa.NextProcess;
+import com.elixir.mars.repository.models.isa.OtherMaterial;
 import com.elixir.mars.repository.models.isa.Output;
 import com.elixir.mars.repository.models.isa.PreviousProcess;
 import com.elixir.mars.repository.models.isa.ProcessSequence;
@@ -41,6 +43,8 @@ class IsaJsonGraphLookupLinkedProcessTest {
     private static final String SAMPLE_COLLECTION_PROTOCOL = "sample collection";
     private static final String LIBRARY_PREPARATION_PROTOCOL = "library preparation";
     private static final String SEQUENCING_PROTOCOL = "nucleic acid sequencing";
+    private static final String EXTRACT_TYPE = "Extract Name";
+    private static final String LIBRARY_TYPE = "Labeled Extract Name";
 
     private Study study;
     private List<ProcessSequence> studyProcesses;
@@ -252,6 +256,50 @@ class IsaJsonGraphLookupLinkedProcessTest {
                 List.of("#process/second"),
                 ids(IsaJsonGraphLookup.findLinkedUpstreamProcesses(processes, first)));
         assertNull(IsaJsonGraphLookup.findProcessByOutputId(processes, "#sample/none"));
+    }
+
+    @Test
+    void materialWithoutDerivesFromResolvesOriginThroughProducingProcess() {
+        final Map<String, OtherMaterial> otherMaterialsById =
+                IsaJsonGraphLookup.buildOtherMaterialsById(rnaSeqAssay.getMaterials());
+        final Map<String, Sample> samplesById =
+                study.getMaterials().getSamples().stream()
+                        .collect(Collectors.toMap(Sample::getId, sample -> sample));
+        final List<OtherMaterial> libraries =
+                otherMaterialsById.values().stream()
+                        .filter(material -> LIBRARY_TYPE.equals(material.getType()))
+                        .collect(Collectors.toList());
+        assertFalse(libraries.isEmpty());
+        assertTrue(
+                otherMaterialsById.values().stream().allMatch(material -> isEmpty(material.getDerivesFrom())),
+                "PTX assay materials only carry their lineage in the process sequence");
+
+        for (final OtherMaterial library : libraries) {
+            final List<String> extractIds = IsaJsonGraphLookup.findMaterialOriginIds(assayProcesses, library);
+            assertEquals(1, extractIds.size(), "Library preparation should have one extract as input");
+            final OtherMaterial extract = otherMaterialsById.get(extractIds.get(0));
+            assertEquals(EXTRACT_TYPE, extract.getType());
+
+            final List<String> sampleIds = IsaJsonGraphLookup.findMaterialOriginIds(assayProcesses, extract);
+            assertEquals(1, sampleIds.size(), "RNA extraction should have one sample as input");
+            assertTrue(samplesById.containsKey(sampleIds.get(0)), "Extract should derive from a study sample");
+        }
+        assertTrue(IsaJsonGraphLookup.findMaterialOriginIds(assayProcesses, (OtherMaterial) null).isEmpty());
+    }
+
+    @Test
+    void declaredDerivesFromTakesPrecedenceOverProcessLineage() {
+        for (final Sample sample : study.getMaterials().getSamples()) {
+            final List<String> declared =
+                    sample.getDerivesFrom().stream().map(DerivesFrom::getId).collect(Collectors.toList());
+            assertEquals(1, declared.size());
+            assertEquals(declared, IsaJsonGraphLookup.findMaterialOriginIds(studyProcesses, sample));
+
+            // Without derivesFrom, the sample collection process that outputs the sample declares no
+            // inputs, so the source is resolved through the growth culture it is chained to.
+            sample.getDerivesFrom().clear();
+            assertEquals(declared, IsaJsonGraphLookup.findMaterialOriginIds(studyProcesses, sample));
+        }
     }
 
     private static ProcessSequence linkedProcess(final String id, final String nextProcessId) {
