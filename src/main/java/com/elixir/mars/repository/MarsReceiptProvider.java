@@ -4,6 +4,7 @@ import com.elixir.mars.repository.models.isa.Assay;
 import com.elixir.mars.repository.models.isa.IsaJson;
 import com.elixir.mars.repository.models.isa.Study;
 import com.elixir.mars.repository.models.receipt.MarsAccession;
+import com.elixir.mars.repository.models.receipt.MarsAssayComment;
 import com.elixir.mars.repository.models.receipt.MarsError;
 import com.elixir.mars.repository.models.receipt.MarsErrorType;
 import com.elixir.mars.repository.models.receipt.MarsInfo;
@@ -25,6 +26,19 @@ public abstract class MarsReceiptProvider {
 
     private final String targetRepository;
 
+    /** Input used to add one repository-provided assay comment to a receipt. */
+    public static final class AssayCommentInput {
+        public final String name;
+        public final String value;
+        public final String assayId;
+
+        public AssayCommentInput(final String name, final String value, final String assayId) {
+            this.name = name;
+            this.value = value;
+            this.assayId = assayId;
+        }
+    }
+
     private static class ReceiptAccessionMap {
         public String isaItemName;
         public String isaFieldKey;
@@ -35,6 +49,7 @@ public abstract class MarsReceiptProvider {
     private static final class ReceiptContext {
         private final MarsMessage message = MarsMessage.builder().build();
         private final List<MarsAccession> accessions = new ArrayList<>();
+        private final List<MarsAssayComment> comments = new ArrayList<>();
 
         private MarsReceipt toReceipt(final String targetRepository, final MarsSubmissionStatus status) {
             return MarsReceipt.builder()
@@ -42,6 +57,7 @@ public abstract class MarsReceiptProvider {
                     .errors(List.copyOf(message.errors))
                     .info(List.copyOf(message.info))
                     .accessions(List.copyOf(accessions))
+                    .assayComments(List.copyOf(comments))
                     .submissionStatus(status)
                     .build();
         }
@@ -66,6 +82,7 @@ public abstract class MarsReceiptProvider {
             final ReceiptAccessionsMap dataFilesAccessionsMap,
             final List<String> info,
             final List<String> errors,
+            final List<AssayCommentInput> comments,
             final MarsSubmissionStatus status,
             final IsaJson isaJson) {
         final ReceiptContext context = new ReceiptContext();
@@ -82,7 +99,31 @@ public abstract class MarsReceiptProvider {
                 dataFilesAccessionsMap,
                 isaJson,
                 context);
+        addMarsAssayComments(context, comments, isaJson);
         return context.toReceipt(targetRepository, status);
+    }
+
+    private void addMarsAssayComments(
+            final ReceiptContext context,
+            final List<AssayCommentInput> assayComments,
+            final IsaJson isaJson) {
+        Optional.ofNullable(assayComments).orElse(List.of()).stream()
+                .filter(comment -> comment != null && comment.name != null && comment.value != null)
+                .forEach(input -> {
+                    MarsAssayComment.MarsAssayCommentBuilder comment = MarsAssayComment.builder()
+                            .name(input.name)
+                            .value(input.value);
+                    if (input.assayId != null) {
+                        Optional.ofNullable(isaJson.studies).orElse(new ArrayList<>()).stream()
+                                .filter(study -> Optional.ofNullable(study.assays).orElse(new ArrayList<>()).stream()
+                                        .anyMatch(assay -> input.assayId.equals(assay.id)))
+                                .findFirst()
+                                .ifPresent(study -> comment.path(List.of(getAssayMarsPath(
+                                        Map.entry(Study.Fields.title, study.title),
+                                        Map.entry("@id", input.assayId)))));
+                    }
+                    context.comments.add(comment.build());
+                });
     }
 
     private void addMarsReceiptErrors(
