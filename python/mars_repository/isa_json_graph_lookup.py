@@ -3,15 +3,18 @@
 Declared process ``input``/``outputs`` always take precedence. A process that declares none is
 resolved through its ``previousProcess``/``nextProcess`` links within the process sequence it
 belongs to, so protocol chains without an intermediate material (e.g. growth culture -> sample
-collection) still resolve. Mirrors the Java ``IsaJsonGraphLookup``.
+collection) still resolve. Likewise, a material without ``derivesFrom`` references derives from
+the inputs of the process that produced it (see ``find_material_origin_ids``). Mirrors the Java
+``IsaJsonGraphLookup``.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from .models.isa.data_file import DataFile
 from .models.isa.materials import Materials
 from .models.isa.other_material import OtherMaterial
 from .models.isa.process_sequence import ProcessSequence
+from .models.isa.sample import Sample
 
 DATA_FILE_ID_PREFIX = "#data_file/"
 DATA_ID_PREFIX = "#data/"
@@ -26,6 +29,7 @@ def _value(item: dict, field: str):
         "other_materials": "otherMaterials",
         "previous_process": "previousProcess",
         "next_process": "nextProcess",
+        "derives_from": "derivesFrom",
     }
     json_field = json_fields.get(field, field)
     return item.get(json_field, item.get(field))
@@ -201,6 +205,31 @@ def find_linked_upstream_processes(
     if process is None or process_sequence is None or _declared_input_ids(process):
         return []
     return _ProcessGraph(process_sequence).upstream_linked_processes(process)
+
+
+def find_material_origin_ids(
+    process_sequence: Optional[List[ProcessSequence]],
+    material: Optional[Union[OtherMaterial, Sample]],
+) -> List[str]:
+    """Return the IDs of the materials a sample or other material derives from.
+
+    These are the declared ``derivesFrom`` references or, when the material declares none, the
+    inputs of the process in ``process_sequence`` that produced it (both resolved through
+    ``previousProcess``/``nextProcess`` links, see ``find_process_by_output_id`` and
+    ``find_process_input_ids``). ISA exports may carry the material lineage only in the process
+    sequence, e.g. ``sample -> extraction -> extract -> library preparation -> library``.
+    """
+    if material is None:
+        return []
+
+    declared = _item_ids(_value(material, "derives_from"))
+    material_id = _value(material, "id")
+    if declared or material_id is None:
+        return declared
+
+    return find_process_input_ids(
+        process_sequence, find_process_by_output_id(process_sequence, material_id)
+    )
 
 
 def _declared_input_ids(process: Optional[ProcessSequence]) -> List[str]:
