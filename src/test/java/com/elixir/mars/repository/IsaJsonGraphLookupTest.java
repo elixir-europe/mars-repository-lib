@@ -1,6 +1,7 @@
 package com.elixir.mars.repository;
 
 import com.elixir.mars.repository.models.isa.Assay;
+import com.elixir.mars.repository.models.isa.Comment;
 import com.elixir.mars.repository.models.isa.DataFile;
 import com.elixir.mars.repository.models.isa.IsaJson;
 import com.elixir.mars.repository.models.isa.OtherMaterial;
@@ -21,38 +22,44 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class IsaJsonGraphLookupTest {
     private static final String ISA_JSON = "MARS/test-data/ena-complete.json";
 
+    private static IsaJson isaJson;
+
     private static Assay assay;
 
-  @BeforeAll
-  static void loadIsaJson() throws IOException {
-    IsaJson isaJson =
-        new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .readValue(Path.of(ISA_JSON).toFile(), IsaJson.class);
-    assay = isaJson.getStudies().get(0).getAssays().get(0);
-  }
+    @BeforeAll
+    static void loadIsaJson() throws IOException {
+        isaJson = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readValue(Path.of(ISA_JSON).toFile(), IsaJson.class);
+        assay = isaJson.getStudies().get(0).getAssays().get(0);
+        // Add submission ID as a comment in the assay
+        Comment comment = new Comment();
+        comment.setName("ena_submission_id");
+        comment.setValue("submission-123");
+        assay.getComments().add(comment);
+    }
 
-  @Test
-  void testFindProcessByOutputId() {
-    ProcessSequence process =
-        IsaJsonGraphLookup.findProcessByOutputId(assay.getProcessSequence(), "#data/334");
-    assertEquals("#process/nucleic_acid_sequencing/334", process.getId());
-  }
+    @Test
+    void testFindProcessByOutputId() {
+        ProcessSequence process =
+            IsaJsonGraphLookup.findProcessByOutputId(assay.getProcessSequence(), "#data/334");
+        assertEquals("#process/nucleic_acid_sequencing/334", process.getId());
+    }
 
-  @Test
-  void testFindProcessByOutputId_noProcessFound() {
-    assertNull(
-        IsaJsonGraphLookup.findProcessByOutputId(
-            assay.getProcessSequence(), "#data/does-not-exist"));
-  }
+    @Test
+    void testFindProcessByOutputId_noProcessFound() {
+        assertNull(
+            IsaJsonGraphLookup.findProcessByOutputId(
+                assay.getProcessSequence(), "#data/does-not-exist"));
+    }
 
-  @Test
-  void testFindOtherMaterialFromProcessInput() {
-    ProcessSequence process = assay.getProcessSequence().get(2);
-    OtherMaterial material =
-        IsaJsonGraphLookup.findOtherMaterialFromProcessInput(process, assay.getMaterials());
-    assertEquals("#other_material/333", material.getId());
-  }
+    @Test
+    void testFindOtherMaterialFromProcessInput() {
+        ProcessSequence process = assay.getProcessSequence().get(2);
+        OtherMaterial material =
+            IsaJsonGraphLookup.findOtherMaterialFromProcessInput(process, assay.getMaterials());
+        assertEquals("#other_material/333", material.getId());
+    }
 
     @Test
     void testFindDataFilesFromProcessOutputs() {
@@ -73,5 +80,11 @@ class IsaJsonGraphLookupTest {
         assertEquals("#data/334", IsaJsonGraphLookup.normalizeDataFileId("#data/334"));
         assertEquals("#sample/331", IsaJsonGraphLookup.normalizeDataFileId("#sample/331"));
         assertNull(IsaJsonGraphLookup.normalizeDataFileId(null));
+    }
+
+    @Test
+    void testFindSubmissionIdForRepository() {
+        assertEquals("submission-123", IsaJsonGraphLookup.findSubmissionId(isaJson, "ena"));
+        assertNull(IsaJsonGraphLookup.findSubmissionId(isaJson, "eva"));
     }
 }

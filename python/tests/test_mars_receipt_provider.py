@@ -57,3 +57,38 @@ def test_get_accession_map_entry_field_does_not_exist():
         "Cannot find an item of dict with the key missingField in the ISA-JSON input"
     )
     assert receipt.get("accessions", []) == []
+
+
+def test_add_assay_comment_with_assay_path():
+    isa_json = _isa_json()
+    assay_id = isa_json["studies"][0]["assays"][0]["@id"]
+
+    receipt = build_mars_receipt(
+        "test-repository",
+        assay_comments=[{"name": "test-repository_name", "value": "value", "assay_id": assay_id}],
+        isa_json=isa_json,
+    )
+
+    assert receipt["assay_comments"] == [{
+        "name": "test-repository_name",
+        "value": "value",
+        "path": [
+            {"key": "studies", "where": {"key": "title", "value": isa_json["studies"][0]["title"]}},
+            {"key": "assays", "where": {"key": "@id", "value": assay_id}},
+        ],
+    }]
+
+
+def test_add_assay_comment_without_assay_path():
+    isa_json = _isa_json()
+
+    receipt = build_mars_receipt(
+        "test-repository",
+        assay_comments=[{"name": "test-repository_name", "value": "value"}],
+        isa_json=isa_json,
+    )
+
+    assert receipt["assay_comments"] == [{
+        "name": "test-repository_name",
+        "value": "value"
+    }]

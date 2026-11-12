@@ -37,6 +37,28 @@ def normalize_data_file_id(id: Optional[str]) -> Optional[str]:
     return id.replace(DATA_FILE_ID_PREFIX, DATA_ID_PREFIX)
 
 
+def find_submission_id(
+    isa_json: Optional[dict], repository_id: Optional[str]
+) -> Optional[str]:
+    """Find a repository submission ID in assay comments."""
+    if isa_json is None or repository_id is None:
+        return None
+
+    expected_name = f"{repository_id}_submission_id"
+    for study in isa_json.get("studies", []):
+        assays = study.get("assays") if study is not None else None
+        if assays is None:
+            continue
+        for assay in assays:
+            comments = assay.get("comments") if assay is not None else None
+            if comments is None:
+                continue
+            for comment in comments:
+                if comment is not None and comment.get("name") == expected_name:
+                    return comment.get("value")
+    return None
+
+
 def build_other_materials_by_id(
     materials: Optional[Materials],
 ) -> Dict[str, OtherMaterial]:
