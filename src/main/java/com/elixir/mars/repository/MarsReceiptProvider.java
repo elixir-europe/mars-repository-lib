@@ -22,48 +22,41 @@ import java.util.Optional;
 
 public abstract class MarsReceiptProvider {
 
-    private MarsReceipt.MarsReceiptBuilder marsReceiptBuilder;
-    private MarsMessage marsMessage;
-    private List<MarsAccession> marsAccessions;
     private final String targetRepository;
 
-    private class ReceiptAccessionMap {
+    private static class ReceiptAccessionMap {
         public String isaItemName;
         public String isaFieldKey;
         public String isaFieldValue;
         public String accession;
     }
 
+    private static final class ReceiptContext {
+        private final MarsMessage message = MarsMessage.builder().build();
+        private final List<MarsAccession> accessions = new ArrayList<>();
+
+        private MarsReceipt toReceipt(final String targetRepository) {
+            return MarsReceipt.builder()
+                    .targetRepository(targetRepository)
+                    .errors(List.copyOf(message.errors))
+                    .info(List.copyOf(message.info))
+                    .accessions(List.copyOf(accessions))
+                    .build();
+        }
+    }
+
     public MarsReceiptProvider(final String targetRepository) {
         this.targetRepository = targetRepository;
-        resetMarsReceipt();
-    }
-
-    public abstract String convertMarsReceiptToJson();
-
-    public void resetMarsReceipt() {
-        marsMessage = MarsMessage.builder().build();
-        marsAccessions = new ArrayList<>();
-        marsReceiptBuilder = MarsReceipt.builder()
-                .targetRepository(targetRepository)
-                .accessions(marsAccessions)
-                .errors(marsMessage.errors)
-                .info(marsMessage.info);
-    }
-
-    public MarsReceipt getMarsReceipt() {
-        return marsReceiptBuilder.build();
     }
 
     /**
-     * Converts target receipt to Mars data format
+     * Builds a complete receipt from one invocation's inputs.
      *
-     * @param isaJson Requested ISA-Json
-     * @param info    List of info messages
-     * @param errors  List of error messages
-     * @see https://github.com/elixir-europe/MARS/blob/refactor/repository-services/repository-api.md#response
+     * <p>The provider owns no request or receipt state. All intermediate data is local to this
+     * invocation, so the same provider instance can be reused concurrently and across thread or
+     * asynchronous boundaries after this method returns.
      */
-    protected void buildMarsReceipt(
+    protected MarsReceipt buildMarsReceipt(
             final ReceiptAccessionsMap studiesAccessionsMap,
             final ReceiptAccessionsMap samplesAccessionsMap,
             final ReceiptAccessionsMap sourcesAccessionsMap,
@@ -72,64 +65,51 @@ public abstract class MarsReceiptProvider {
             final List<String> info,
             final List<String> errors,
             final IsaJson isaJson) {
-        final String[] errorArray = Optional.ofNullable(errors).orElse(new ArrayList<>()).toArray(String[]::new);
-        final String[] infoArray = Optional.ofNullable(info).orElse(new ArrayList<>()).toArray(String[]::new);
-
-        setMarsReceiptErrors(MarsErrorType.INVALID_METADATA, errorArray);
-        setMarsReceiptInfo(infoArray);
-        setMarsAccessions(
+        final ReceiptContext context = new ReceiptContext();
+        addMarsReceiptErrors(
+                context,
+                MarsErrorType.INVALID_METADATA,
+                Optional.ofNullable(errors).orElse(List.of()).toArray(String[]::new));
+        addMarsReceiptInfo(context, Optional.ofNullable(info).orElse(List.of()).toArray(String[]::new));
+        addMarsAccessions(
                 studiesAccessionsMap,
                 samplesAccessionsMap,
                 sourcesAccessionsMap,
                 otherMaterialsAccessionsMap,
                 dataFilesAccessionsMap,
-                isaJson);
-        marsReceiptBuilder
-                .accessions(marsAccessions)
-                .errors(marsMessage.errors)
-                .info(marsMessage.info);
+                isaJson,
+                context);
+        return context.toReceipt(targetRepository);
     }
 
-    protected void setMarsReceiptErrors(MarsErrorType type, final MarsError... errors) {
-        for (MarsError error : Optional.ofNullable(errors).filter(error -> error != null).get()) {
-            marsMessage.errors
-                    .add(
-                            MarsError.builder()
-                                    .message(error.message)
-                                    .path(error.path)
-                                    .type(type)
-                                    .build());
-        }
-    }
-
-    protected void setMarsReceiptErrors(MarsErrorType type, final String... errors) {
+    private void addMarsReceiptErrors(
+            final ReceiptContext context, final MarsErrorType type, final String... errors) {
         for (String error : Optional.ofNullable(errors).orElse(new String[]{"Null message received"})) {
-            marsMessage.errors
-                    .add(
-                            MarsError.builder()
-                                    .message(error)
-                                    .type(type)
-                                    .build());
+            context.message.errors.add(
+                    MarsError.builder()
+                            .message(error)
+                            .type(type)
+                            .build());
         }
     }
 
-    protected void setMarsReceiptInfo(final String... info) {
+    private void addMarsReceiptInfo(final ReceiptContext context, final String... info) {
         for (String infoItem : Optional.ofNullable(info).orElse(new String[0])) {
-            marsMessage.info
-                    .add(
-                            MarsInfo.builder()
-                                    .message(infoItem)
-                                    .build());
+            context.message.info.add(
+                    MarsInfo.builder()
+                            .message(infoItem)
+                            .build());
         }
     }
 
-    protected void setMarsAccessions(
+    private void addMarsAccessions(
             final ReceiptAccessionsMap studiesAccessionsMap,
             final ReceiptAccessionsMap samplesAccessionsMap,
             final ReceiptAccessionsMap sourcesAccessionsMap,
             final ReceiptAccessionsMap otherMaterialsAccessionsMap,
             final ReceiptAccessionsMap dataFilesAccessionsMap,
-            final IsaJson isaJson) {
+            final IsaJson isaJson,
+            final ReceiptContext context) {
         Optional.ofNullable(isaJson.studies)
                 .orElse(new ArrayList<>())
                 .forEach(
@@ -141,9 +121,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     assay -> {
                                                         ReceiptAccessionMap assayAccessionMap =
-                                                                getAccessionMapEntry(studiesAccessionsMap, assay, marsMessage);
+                                                                getAccessionMapEntry(studiesAccessionsMap, assay, context);
                                                         if (assayAccessionMap.accession != null) {
-                                                            marsAccessions.add(
+                                                            context.accessions.add(
                                                                     getAssayStudyMarsAccession(
                                                                             Map.entry(Study.Fields.title, study.title),
                                                                             assayAccessionMap));
@@ -151,9 +131,9 @@ public abstract class MarsReceiptProvider {
                                                     });
                                 } else {
                                     ReceiptAccessionMap studyAccessionMap =
-                                            getAccessionMapEntry(studiesAccessionsMap, study, marsMessage);
+                                            getAccessionMapEntry(studiesAccessionsMap, study, context);
                                     if (studyAccessionMap.accession != null) {
-                                        marsAccessions.add(getStudyMarsAccession(studyAccessionMap));
+                                        context.accessions.add(getStudyMarsAccession(studyAccessionMap));
                                     }
                                 }
                                 ReceiptAccessionMap studyAccessionMap = new ReceiptAccessionMap();
@@ -165,9 +145,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     sample -> {
                                                         ReceiptAccessionMap sampleAccessionMap = getAccessionMapEntry(
-                                                                samplesAccessionsMap, sample, marsMessage);
+                                                                samplesAccessionsMap, sample, context);
                                                         if (sampleAccessionMap.accession != null) {
-                                                            marsAccessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
+                                                            context.accessions.add(getSampleMarsAccession(studyAccessionMap, sampleAccessionMap));
                                                         }
                                                     });
                                 }
@@ -177,9 +157,9 @@ public abstract class MarsReceiptProvider {
                                             .forEach(
                                                     source -> {
                                                         ReceiptAccessionMap sourceAccessionMap = getAccessionMapEntry(
-                                                                sourcesAccessionsMap, source, marsMessage);
+                                                                sourcesAccessionsMap, source, context);
                                                         if (sourceAccessionMap.accession != null) {
-                                                            marsAccessions.add(getSourceMarsAccession(studyAccessionMap, sourceAccessionMap));
+                                                            context.accessions.add(getSourceMarsAccession(studyAccessionMap, sourceAccessionMap));
                                                         }
                                                     });
                                 }
@@ -194,9 +174,9 @@ public abstract class MarsReceiptProvider {
                                                                     .forEach(
                                                                             otherMaterial -> {
                                                                                 ReceiptAccessionMap otherMaterialAccessionMap = getAccessionMapEntry(
-                                                                                        otherMaterialsAccessionsMap, otherMaterial, marsMessage);
+                                                                                        otherMaterialsAccessionsMap, otherMaterial, context);
                                                                                 if (otherMaterialAccessionMap.accession != null) {
-                                                                                    marsAccessions.add(getOtherMaterialMarsAccession(
+                                                                                    context.accessions.add(getOtherMaterialMarsAccession(
                                                                                             studyAccessionMap,
                                                                                             assay.id,
                                                                                             otherMaterialAccessionMap));
@@ -209,9 +189,9 @@ public abstract class MarsReceiptProvider {
                                                                     .forEach(
                                                                             dataFile -> {
                                                                                 ReceiptAccessionMap dataFileAccessionMap = getAccessionMapEntry(
-                                                                                        dataFilesAccessionsMap, dataFile, marsMessage);
+                                                                                        dataFilesAccessionsMap, dataFile, context);
                                                                                 if (dataFileAccessionMap.accession != null) {
-                                                                                    marsAccessions.add(getDataFileMarsAccession(
+                                                                                    context.accessions.add(getDataFileMarsAccession(
                                                                                             studyAccessionMap,
                                                                                             assay.id,
                                                                                             dataFileAccessionMap));
@@ -441,7 +421,7 @@ public abstract class MarsReceiptProvider {
     private <T> ReceiptAccessionMap getAccessionMapEntry(
             final ReceiptAccessionsMap accessionsMap,
             final T item,
-            final MarsMessage marsMessage) {
+            final ReceiptContext context) {
         try {
             return new ReceiptAccessionMap() {
                 {
@@ -457,7 +437,7 @@ public abstract class MarsReceiptProvider {
                 }
             };
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            marsMessage.errors
+            context.message.errors
                     .add(
                             MarsError.builder()
                                     .message(
