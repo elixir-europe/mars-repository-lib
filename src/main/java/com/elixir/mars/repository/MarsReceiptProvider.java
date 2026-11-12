@@ -10,6 +10,7 @@ import com.elixir.mars.repository.models.receipt.MarsInfo;
 import com.elixir.mars.repository.models.receipt.MarsMessage;
 import com.elixir.mars.repository.models.receipt.MarsPath;
 import com.elixir.mars.repository.models.receipt.MarsReceipt;
+import com.elixir.mars.repository.models.receipt.MarsSubmissionStatus;
 import com.elixir.mars.repository.models.receipt.MarsWhere;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -35,12 +36,13 @@ public abstract class MarsReceiptProvider {
         private final MarsMessage message = MarsMessage.builder().build();
         private final List<MarsAccession> accessions = new ArrayList<>();
 
-        private MarsReceipt toReceipt(final String targetRepository) {
+        private MarsReceipt toReceipt(final String targetRepository, final MarsSubmissionStatus status) {
             return MarsReceipt.builder()
                     .targetRepository(targetRepository)
                     .errors(List.copyOf(message.errors))
                     .info(List.copyOf(message.info))
                     .accessions(List.copyOf(accessions))
+                    .submissionStatus(status)
                     .build();
         }
     }
@@ -64,6 +66,7 @@ public abstract class MarsReceiptProvider {
             final ReceiptAccessionsMap dataFilesAccessionsMap,
             final List<String> info,
             final List<String> errors,
+            final MarsSubmissionStatus status,
             final IsaJson isaJson) {
         final ReceiptContext context = new ReceiptContext();
         addMarsReceiptErrors(
@@ -79,7 +82,7 @@ public abstract class MarsReceiptProvider {
                 dataFilesAccessionsMap,
                 isaJson,
                 context);
-        return context.toReceipt(targetRepository);
+        return context.toReceipt(targetRepository, status);
     }
 
     private void addMarsReceiptErrors(
