@@ -37,6 +37,7 @@ def build_mars_receipt(
     data_files_accessions: Optional[ReceiptAccessionsMap] = None,
     info: Optional[list[str]] = None,
     errors: Optional[list[str]] = None,
+    assay_comments: Optional[list[Optional[dict[str, Optional[str]]]]] = None,
     isa_json: Optional[IsaJson] = None,
 ) -> MarsReceipt:
     receipt_errors: list[dict] = []
@@ -71,6 +72,34 @@ def build_mars_receipt(
         result["info"] = receipt_info
     if accessions:
         result["accessions"] = accessions
+    comments = _build_assay_comments(assay_comments, isa_json)
+    if comments:
+        result["assay_comments"] = comments
+    return result
+
+
+def _build_assay_comments(
+    comments: Optional[list[Optional[dict[str, Optional[str]]]]],
+    isa_json: Optional[IsaJson],
+) -> list[dict]:
+    result: list[dict] = []
+    for comment in comments or []:
+        if not comment or comment.get("name") is None or comment.get("value") is None:
+            continue
+
+        built_comment = {"name": comment["name"], "value": comment["value"]}
+        assay_id = comment.get("assay_id")
+        if assay_id is not None and isa_json:
+            for study in isa_json.get("studies") or []:
+                if any(
+                    _item_value(assay, "id") == assay_id
+                    for assay in study.get("assays") or []
+                ):
+                    built_comment["path"] = make_assay_path(
+                        "title", study.get("title") or "", "@id", assay_id
+                    )
+                    break
+        result.append(built_comment)
     return result
 
 
