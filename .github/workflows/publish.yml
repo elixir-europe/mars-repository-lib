@@ -1,9 +1,10 @@
-name: Publish package to GitHub Packages
+name: Publish Java package to GitHub Packages
 
 on:
   push:
     tags:
       - '**'
+      - '!py**'
   workflow_dispatch:
 
 jobs:
